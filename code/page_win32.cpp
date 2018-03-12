@@ -22,33 +22,65 @@ static bool globalRunning;
 static Win32WindowDimensions globalWindowDimensions;
 static Player player;
 const float playerDistPerSec = .25;
-bool movingLeft = false;
-bool movingRight = false;
+KeyboardState keyboardState;
 LRESULT CALLBACK
 win32MainWindowCallback(HWND window, UINT message, WPARAM WParam, LPARAM LParam) {       
   LRESULT result = 0;
   if(message == WM_KEYDOWN) {
     switch(WParam) {
       case 'W': {
+        keyboardState.moveForward = true;
       }
       break;
       case 'A': {
-        movingRight = false;
-        movingLeft = true; 
+        keyboardState.strafeLeft = true; 
       }
       break;
-      case 'S': {}
+      case 'S': {
+        keyboardState.moveBackward = true;
+      }
       break;
       case 'D': {
-        movingLeft = false;
-        movingRight = true;
+        keyboardState.strafeRight = true;
       }
       break;
       case VK_ESCAPE: {
         globalRunning = false;
       } break;
+      case VK_LEFT: {
+        keyboardState.turnLeft = true;
+      } break;
+      case VK_RIGHT: {
+        keyboardState.turnRight = true;
+      } break;
       default: {
         return result;
+      } break;
+    }
+  }
+  else if (message == WM_KEYUP) {
+    switch(message){
+      case 'W': {
+        keyboardState.moveForward = false;
+      }
+      break;
+      case 'A': {
+       keyboardState.strafeLeft = false; 
+      }
+      break;
+      case 'S': {
+        keyboardState.moveBackward = false;
+      }
+      break;
+      case 'D': {
+        keyboardState.strafeRight = false;
+      }
+      break;
+      case VK_LEFT: {
+        keyboardState.turnLeft = false;
+      } break;
+      case VK_RIGHT: {
+        keyboardState.turnRight = false;
       } break;
     }
   }
@@ -172,14 +204,6 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
 
         //updatePlayerMovement(&player, lastFrameSec);
         //frameUpdateCleanup();
-        float moveDir = 0.0;
-        if(movingLeft) {
-          moveDir = -1.0f;
-        }
-        if(movingRight) {
-          moveDir = 1.0f;
-        }
-        player.center.x += moveDir*playerDistPerSec*lastFrameSec;
         
         glClearColor(1.0,0.0,1.0,1.0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -192,15 +216,19 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
         4x4 modelMat = identity();
         GLuint modelID = glGetUniformLocation(shaderProgram, "model");
         glUniformMatrix4fv(modelID, 1, GL_TRUE, (float*) modelMat.n);*/
-
+        
         v3 cameraDir = V3(0,0,-1);
         v3 cameraUp = V3(0,1,0);
         v3 cameraRight = normalize(cross(cameraUp, cameraDir));
 
 
         m4x4 projMat;
-        aroFrustrum(player.center.y - 2, player.center.y + 2, 
-          player.center.x - 2, player.center.x + 2, 0.0f, 10.0f, projMat);
+        aroFrustrum(player.center.y - 1, player.center.y + 1, 
+          player.center.x - 1, player.center.x + 1, 0.1f, 1000.0f, projMat);
+        //getOrthoProjMatrix(player.center.y - 2, player.center.y + 2, 
+        //  player.center.x - 2, player.center.x + 2, 0.1f, 10.0f, projMat);
+        
+
         GLuint projID = glGetUniformLocation(renderer.shaderID, "projection");
         glUniformMatrix4fv(projID, 1, GL_FALSE, (float*) projMat.n);
         renderer.draw();
