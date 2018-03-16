@@ -2,6 +2,7 @@
 #include <gl/GL.h>
 #include <math.h>
 #include <stdint.h>
+#include <vector>
 
 #include "aro_generic.h"
 #include "aro_opengl.h"
@@ -12,9 +13,12 @@ const char* vertexSource = R"FOO(
 #version 330 core
 layout (location = 0) in vec3 position;
 uniform mat4 projection;
+uniform mat4 view;
+uniform mat4 model;
+
 void main()
 {
-  gl_Position = projection * vec4(position.x, position.y, position.z, 1.0f);
+  gl_Position =  projection * view * vec4(position.x, position.y, position.z, 1.0f);
 }
 )FOO";
 
@@ -29,9 +33,11 @@ void main()
 )FOO";
 
 void Renderer::initialize() {
-  mesh = new Mesh(1);
-  Triangle* tri = new Triangle(V3(-0.5, -0.5, -1.0), V3(0, .5, -1.0), V3(.5,-.5, -1.0));
-  mesh->addTri(tri);
+  meshes.reserve(20);
+  Mesh* test = new Mesh(1);
+  Triangle* tri = new Triangle(V3(-.5f, 0.0f, -.5f), V3(3.0f, 0.0f, -.5), V3(-.5f,1.0f, -.5f));
+  test->addTri(tri);
+  meshes.push_back(test);
 
   GLuint vertShader, fragShader;
   int success;
@@ -84,6 +90,8 @@ void Renderer::initialize() {
   glGenBuffers(1, &ebo);
   glBindVertexArray(vao);
   
+
+  Mesh* mesh = reinterpret_cast<Mesh*>(meshes.at(0));
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
   glBufferData(GL_ARRAY_BUFFER, mesh->numTris*sizeof(Triangle), mesh->tris, GL_DYNAMIC_DRAW);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
@@ -109,9 +117,11 @@ void Mesh::addTri(Triangle* tri) {
   *elementsPtr =  elenumber;
   elementsPtr++;
   nextTri++;
-
 }
 
 void Renderer::draw() {
-  glDrawElements(GL_TRIANGLES, mesh->numTris*3, GL_UNSIGNED_INT, 0);
+  for(int i=0; i < meshes.size();i++) {
+    const Mesh* mesh = meshes.at(i);
+    glDrawElements(GL_TRIANGLES, mesh->numTris*3, GL_UNSIGNED_INT, 0);
+  }
 }

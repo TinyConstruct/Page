@@ -1,6 +1,5 @@
 #ifndef __RENDERING__
 #define __RENDERING__
-
 class Cube {
 public: 
   v3 center; 
@@ -52,7 +51,9 @@ class Renderer {
   public:
   GLuint vbo, ebo;
   GLuint shaderID;
-  Mesh* mesh;
+  float aspectRatio;
+  std::vector<Mesh*> meshes;
+
   void initialize();
   void draw();
 };

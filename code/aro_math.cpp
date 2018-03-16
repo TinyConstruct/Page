@@ -73,7 +73,11 @@ inline float magnitude(const v2& v) {
 }
 
 inline v2 normalize(const v2& v) {
-  return (v/magnitude(v));
+  float mag = magnitude(v);
+  if(mag==0) {
+    return V2(0.0f,0.0f);
+  }
+  return (v/mag);
 }
 
 
@@ -108,7 +112,7 @@ v3 V3(float X, float Y, float Z) {
   return v;
 }
 
-inline v3 operator+(v3 a, v3 b) {
+v3 operator+(v3 a, v3 b) {
   v3 result; 
   result.x = a.x + b.x;
   result.y = a.y + b.y;
@@ -116,7 +120,7 @@ inline v3 operator+(v3 a, v3 b) {
   return result;
 }
 
-inline v3 operator-(v3 a, v3 b) {
+v3 operator-(v3 a, v3 b) {
   v3 result; 
   result.x = a.x - b.x;
   result.y = a.y - b.y;
@@ -124,7 +128,7 @@ inline v3 operator-(v3 a, v3 b) {
   return result;
 }
 
-inline v3 operator*(float a, v3 v) {
+v3 operator*(float a, v3 v) {
   v3 result; 
   result.x = v.x*a;
   result.y = v.y*a;
@@ -132,7 +136,7 @@ inline v3 operator*(float a, v3 v) {
   return result;
 }
 
-inline v3 operator*=(v3 &v, float a) {
+v3 operator*=(v3 &v, float a) {
   v = a*v;
   return v;
 }
@@ -146,12 +150,12 @@ v3 operator/(v3 v, float a) {
   return result;
 }
 
-inline v3 operator/=(v3 &v, float a) {
+v3 operator/=(v3 &v, float a) {
   v = v/a;
   return v;
 }
 
-inline v3 V3(v2 XY, float Z) {
+v3 V3(v2 XY, float Z) {
   v3 v;
   v.x = XY.x; 
   v.y = XY.y;
@@ -159,18 +163,22 @@ inline v3 V3(v2 XY, float Z) {
   return v;
 }
 
-inline float magnitude(const v3& v) {
+float magnitude(const v3& v) {
   return sqrt(v.x*v.x + v.y*v.y + v.z*v.z);
 }
 
 v3 normalize(const v3& v) {
-  return (v/magnitude(v));
+  float mag = magnitude(v);
+  if(mag==0) {
+    return V3(0.0f,0.0f,0.0f);
+  }
+  return (v/mag);
 }
 
 
 ////////////// V4 ////////////////////////////////
 
-inline v4 V4(float X, float Y, float Z, float W) {
+v4 V4(float X, float Y, float Z, float W) {
   v4 v;
   v.x = X; 
   v.y = Y;
@@ -179,7 +187,7 @@ inline v4 V4(float X, float Y, float Z, float W) {
   return v;
 }
 
-inline v4 operator+(v4 a, v4 b) {
+v4 operator+(v4 a, v4 b) {
   v4 result; 
   result.x = a.x + b.x;
   result.y = a.y + b.y;
@@ -188,7 +196,7 @@ inline v4 operator+(v4 a, v4 b) {
   return result;
 }
 
-inline v4 operator-(v4 a, v4 b) {
+v4 operator-(v4 a, v4 b) {
   v4 result; 
   result.x = a.x - b.x;
   result.y = a.y - b.y;
@@ -197,7 +205,7 @@ inline v4 operator-(v4 a, v4 b) {
   return result;
 }
 
-inline v4 operator*(float a, v4 v) {
+v4 operator*(float a, v4 v) {
   v4 result; 
   result.x = v.x*a;
   result.y = v.y*a;
@@ -206,26 +214,27 @@ inline v4 operator*(float a, v4 v) {
   return result;
 }
 
-inline v4 operator*=(v4 &v, float a) {
+v4 operator*=(v4 &v, float a) {
   v = a*v;
   return v;
 }
 
-inline v4 operator/(v4 v, float a) {
+v4 operator/(v4 v, float a) {
   v4 result; 
   float s = 1.0f/a;
   result.x = v.x*s;
   result.y = v.y*s;
   result.z = v.z*s;
   result.w = v.w*s;
+  return result;
 }
 
-inline v4 operator/=(v4 &v, float a) {
+v4 operator/=(v4 &v, float a) {
   v = v/a;
   return v;
 }
 
-inline v4 V4(v3 XYZ, float W) {
+v4 V4(v3 XYZ, float W) {
   v4 v;
   v.x = XYZ.x; 
   v.y = XYZ.y;
@@ -234,7 +243,7 @@ inline v4 V4(v3 XYZ, float W) {
   return v;
 }
 
-inline v4 V4(v3 XYZ) {
+v4 V4(v3 XYZ) {
   v4 v;
   v.x = XYZ.x; 
   v.y = XYZ.y;
@@ -247,7 +256,7 @@ inline v4 V4(v3 XYZ) {
 //Points have implied w=1 components
 ////////////// P3 ////////////////////////////////
 
-inline p3 P3(float X, float Y, float Z) {
+p3 P3(float X, float Y, float Z) {
   p3 p;
   p.x = X; 
   p.y = Y;
@@ -255,7 +264,7 @@ inline p3 P3(float X, float Y, float Z) {
   return p;
 }
 
-inline v3 operator-(p3 a, p3 b) {
+v3 operator-(p3 a, p3 b) {
   v3 result; 
   result.x = a.x - b.x;
   result.y = a.y - b.y;
@@ -301,7 +310,7 @@ m4x4 cols4x4(v3 a, v3 b, v3 c) {
   return(result);
 }
 
-inline m4x4
+m4x4
 identity(void) {
     m4x4 result = 
     {
@@ -313,19 +322,19 @@ identity(void) {
     return(result);
 }
 
-inline v3
+v3
 col(m4x4& a, unsigned int c) {
     v3 result = {a.n[0][c], a.n[1][c], a.n[2][c]};
     return(result);
 }
 
-inline v3
+v3
 row(m4x4& a, unsigned int r) {
     v3 result = {a.n[r][0], a.n[r][1], a.n[r][2]};
     return(result);
 }
 
-inline v4 operator*(m4x4& m, v4 v) {
+v4 operator*(m4x4& m, v4 v) {
   v4 result = { m.n[0][0] * v.x + m.n[0][1] * v.y + m.n[0][2] * v.z + m.n[0][3] * v.w,
     m.n[1][0] * v.x + m.n[1][1] * v.y + m.n[1][2] * v.z + m.n[1][3] * v.w,
     m.n[2][0] * v.x + m.n[2][1] * v.y + m.n[2][2] * v.z + m.n[2][3] * v.w,
@@ -334,22 +343,24 @@ inline v4 operator*(m4x4& m, v4 v) {
 }
 
 //for m4x4 * v3, treat the v3 as if it were a a v4 where w = 0
-inline v4 operator*(m4x4& m, v3 v) {
+v4 operator*(m4x4& m, v3 v) {
   v4 result = { m.n[0][0] * v.x + m.n[0][1] * v.y + m.n[0][2] * v.z,
     m.n[1][0] * v.x + m.n[1][1] * v.y + m.n[1][2] * v.z,
     m.n[2][0] * v.x + m.n[2][1] * v.y + m.n[2][2] * v.z,
     m.n[3][0] * v.x + m.n[3][1] * v.y + m.n[3][2] * v.z};
+  return result;
 }
 
 //for m4x4 * p3, treat the p3 as if it were a a v4 where w = 1
-inline v4 operator*(m4x4& m, p3 v) {
+v4 operator*(m4x4& m, p3 v) {
   v4 result = { m.n[0][0] * v.x + m.n[0][1] * v.y + m.n[0][2] * v.z + m.n[0][3],
     m.n[1][0] * v.x + m.n[1][1] * v.y + m.n[1][2] * v.z + m.n[1][3],
     m.n[2][0] * v.x + m.n[2][1] * v.y + m.n[2][2] * v.z + m.n[2][3],
     m.n[3][0] * v.x + m.n[3][1] * v.y + m.n[3][2] * v.z + m.n[3][3] };
+  return result;
 }
 
-inline m4x4 operator*(m4x4& a, m4x4& b) {
+m4x4 operator*(m4x4& a, m4x4& b) {
   //TODO: this is slow
   m4x4 result = M4x4(
     a.n[0][0]*b.n[0][0] + a.n[0][1]*b.n[1][0] + a.n[0][2]*b.n[2][0] + a.n[0][3]*b.n[3][0],
@@ -404,7 +415,7 @@ inline m4x4 makeRotX(float t) {
                0.0f, 0.0f, 0.0f, 1.0f));
 }
 
-inline m4x4 makeRotY(float t) {
+m4x4 makeRotY(float t) {
   float c = cos(t);
   float s = sin(t);
   return (M4x4(c,    0.0f, s,    0.0f,
@@ -422,7 +433,7 @@ inline m4x4 makeRotZ(float t) {
                0.0f, 0.0f, 0.0f, 1.0f));
 }
 
-inline m4x4 translate(v3 v) {
+m4x4 translate(v3 v) {
   return (M4x4(1.0f,  0.0f, 0.0f, v.x,
                0.0f,  1.0f, 0.0f, v.y,
                0.0f,  0.0f, 1.0f, v.z, 
@@ -489,26 +500,124 @@ void aroInfFrustrum(
 } 
 
 void aroFrustrum( 
-    const float &b, const float &t, const float &l, const float &r, 
-    const float &n, const float &f, m4x4& M) 
+    m4x4& M, const float &left, const float &right, const float &bottom, const float &top, 
+    const float &znear, const float &zfar) 
 { 
-    M.n[0][0] = 2*n / (r - l); 
-    M.n[0][1] = 0; 
-    M.n[0][2] = 0;
-    M.n[0][3] = 0; 
+    float a, b, c, d;
+    a = 2.0f * znear;
+    b = right - left;
+    c = top - bottom; 
+    d = zfar - znear;
+    M.n[0][0] = a / b; 
+    M.n[0][1] = 0.0f; 
+    M.n[0][2] = 0.0f;
+    M.n[0][3] = 0.0f; 
  
-    M.n[1][0] = 0; 
-    M.n[1][1] = 2*n / (t - b); 
-    M.n[1][2] = 0; 
-    M.n[1][3] = 0; 
+    M.n[1][0] = 0.0f; 
+    M.n[1][1] = a/c; 
+    M.n[1][2] = 0.0f; 
+    M.n[1][3] = 0.0f; 
  
-    M.n[2][0] = (r+l)/(r-l); 
-    M.n[2][1] = (t+b) / (t-b); 
-    M.n[2][2] = -(f+n)/(f-n); 
+    M.n[2][0] = (right + left) / b; 
+    M.n[2][1] = (top + bottom) / c; 
+    M.n[2][2] = (-zfar - znear) / d; 
     M.n[2][3] = -1; 
  
-    M.n[3][0] = 0; 
-    M.n[3][1] = 0; 
-    M.n[3][2] = -2*n*f/(f-n); 
-    M.n[3][3] = 0; 
+    M.n[3][0] = 0.0f; 
+    M.n[3][1] = 0.0f; 
+    M.n[3][2] = (-a*zfar) / d; 
+    M.n[3][3] = 0.0f; 
 } 
+
+void aroPerspective(m4x4& M, float fovy, float aspect, float near, float far) {
+  float ymax, xmax;
+  ymax = near * tanf(fovy * M_PI / 360.0f);
+  xmax = ymax*aspect;
+  aroFrustrum(M, -xmax, xmax, -ymax, ymax, near, far);
+}
+
+m4x4 aroLookatc(v3* eyePosition, v3* viewCenter) {
+  v3 forward = normalize(*viewCenter - *eyePosition);
+  v3 right = normalize(cross(forward, V3(0.0, 1.0, 0.0)));
+  v3 up = normalize(cross(right, forward));
+
+  m4x4 M;
+  M.n[0][0] = right.x; 
+  M.n[0][1] = up.x;
+  M.n[0][2] = forward.x;
+  M.n[0][3] = 0.0; 
+ 
+  M.n[1][0] = right.y; 
+  M.n[1][1] = up.y; 
+  M.n[1][2] = forward.y;
+  M.n[1][3] = 0.0; 
+ 
+  M.n[2][0] = right.z; 
+  M.n[2][1] = up.z;
+  M.n[2][2] = forward.z;
+  M.n[2][3] = 0.0; 
+ 
+  M.n[3][0] = 0.0f; 
+  M.n[3][1] = 0.0f; 
+  M.n[3][2] = 0.0f; 
+  M.n[3][3] = 1.0f;
+
+  v3 p = V3(-eyePosition->x, -eyePosition->y, -eyePosition->z);
+  return (M*translate(p));
+}
+
+m4x4 aroLookatb(v3* eyePosition, v3* viewCenter) {
+  v3 forward = normalize(*viewCenter - *eyePosition);
+  v3 right = normalize(cross(forward, V3(0.0, 1.0, 0.0)));
+  v3 up = normalize(cross(right, forward));
+
+  m4x4 M;
+  M.n[0][0] = right.x; 
+  M.n[0][1] = right.y;
+  M.n[0][2] = right.z;
+  M.n[0][3] = 0.0; 
+ 
+  M.n[1][0] = right.x; 
+  M.n[1][1] = up.y; 
+  M.n[1][2] = up.z;
+  M.n[1][3] = 0.0; 
+ 
+  M.n[2][0] = -right.y; 
+  M.n[2][1] = -forward.x;
+  M.n[2][2] = -forward.z;
+  M.n[2][3] = 0.0; 
+ 
+  M.n[3][0] = 0.0f; 
+  M.n[3][1] = 0.0f; 
+  M.n[3][2] = 0.0f; 
+  M.n[3][3] = 1.0f;
+
+  v3 p = V3(eyePosition->x, eyePosition->y, eyePosition->z);
+  return (M*translate(p));
+}
+
+m4x4 aroLookat(v3 &eyePosition, v3 &viewCenter)
+{
+  m4x4 result;
+  v3 forward = normalize(viewCenter - eyePosition);
+  v3 right = normalize(cross(forward, V3(0.0,1.0,0.0)));
+  v3 up = normalize(cross(right, forward));
+
+  result.n[0][0] = right.x;
+  result.n[0][1] = right.y;
+  result.n[0][2] = right.z;
+  result.n[0][3] = -dot(right,eyePosition);
+  result.n[1][0] = up.x;
+  result.n[1][1] = up.y;
+  result.n[1][2] = up.z;
+  result.n[1][3] = -dot(up,eyePosition);
+  result.n[2][0] = -forward.x;
+  result.n[2][1] = -forward.y;
+  result.n[2][2] = -forward.z;
+  result.n[2][3] = dot(forward,eyePosition);  
+  result.n[3][0] = 0.0f;
+  result.n[3][1] = 0.0f;
+  result.n[3][2] = 0.0f;
+  result.n[3][3] = 1.0f;
+  return result;
+}

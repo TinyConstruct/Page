@@ -7,6 +7,11 @@ struct Win32WindowDimensions
     int height;
 };
 
+struct Win32WindowLocation {
+  int upperLeftX, upperLeftY;
+  int centerX, centerY;
+};
+
 void* getWin32GLFunc(const char *name);
 Win32WindowDimensions win32GetWindowDimension(HWND window);
 
