@@ -17,7 +17,7 @@
 #include "rendering.h"
 #include "aro_opengl.h"
 #include "aro_platform_win32.h"
-#include "gamestate.cpp"
+#include "gamestate.h"
 #include "page_win32.h"
 
 static bool globalRunning;
@@ -283,18 +283,13 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
         glClearColor(1.0,0.0,1.0,1.0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glUseProgram(renderer.shaderID);
-        
-        GLuint color = glGetUniformLocation(renderer.shaderID, "colorIn");
-        glUniform3f(color,1,0,0);
-       
-        //char strTime[400];
-        //sprintf_s(strTime, 400, "view: %f %f %f\n", viewDir.x, viewDir.y, viewDir.z);
-        //OutputDebugString(strTime);
-        //sprintf_s(strTime, 400, "player center: %f %f %f \n", player.center.x, player.center.y, player.center.z);
-        //OutputDebugString(strTime);
 
         v3 cameraPosition = V3(player.center.x, player.center.y, player.center.z);//player.center.x, player.center.y, player.center.z);
-           
+        
+        m4x4 modelMat = identity();
+        GLint modelID = glGetUniformLocation(renderer.shaderID, "model");
+        glUniformMatrix4fv(modelID, 1, GL_FALSE, (float*)modelMat.n);
+        
         m4x4 projMat; 
         aroPerspective(projMat, 45.0f, renderer.aspectRatio, 0.1f, 100.0f);
         m4x4 viewMat = aroLookat(cameraPosition, cameraPosition + player.viewDir);

@@ -1,59 +1,43 @@
 #ifndef __RENDERING__
 #define __RENDERING__
-class Cube {
-public: 
-  v3 center; 
-  int width;
-  Cube(v3 c, int w) {
-    center = c;
-    width = w;
-  }
+
+enum {LEVEL_BUFFER};
+
+struct Vertpcn {
+  v3 position;
+  v3 color;
+  v3 normal;
 };
 
-class Triangle {
-private:
-  v3 vert1, vert2, vert3;
-public: 
-  Triangle(){}
-  Triangle(const v3 vin1, const v3 vin2, const v3 vin3) {
-    vert1 = vin1;
-    vert2 = vin2;
-    vert3 = vin3;
-  }
-};
-
-class Color {
-public:
+struct Color {
   float r,g,b;
 };
 
 class Mesh {
-private:
-  int nextTri;
 public:
-  Triangle* tris;
-  Color color;
-  int* elements;
+  Vertpcn* firstVert;
+  std::vector<Vertpcn>* verts; //Vertp3c
+  std::vector<int>* elements;
   int numTris;
-  Mesh(int numTrisInMesh) {
+  v3 meshCenter;
+  Mesh(int numTrisInMesh, std::vector<Vertpcn>* vertArray, std::vector<int>* indexArray) {
     numTris = numTrisInMesh;
-    tris = new Triangle[numTrisInMesh];
-    elements = new int[numTrisInMesh*3];
-    nextTri = 0;
-    color.r = 1.0f;
-    color.g = 0.0f;
-    color.b = 0.0f;
+    verts = vertArray;
+    elements = indexArray;
+    //firstVert = level[level.size()];
   }
-  void addTri(Triangle* tri);
+  void addTri(Vertpcn a, Vertpcn b, Vertpcn c);
+  void addCube(v3 center, float width, v3 color);
 };
 
 class Renderer {
-  public:
+public:
   GLuint vbo, ebo;
   GLuint shaderID;
   float aspectRatio;
   std::vector<Mesh*> meshes;
-
+  std::vector<Vertpcn> level; //Vertp3c
+  std::vector<int> levelElements;
   void initialize();
   void draw();
 };
