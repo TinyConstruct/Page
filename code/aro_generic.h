@@ -4,6 +4,8 @@
 #include <stdint.h>
 
 #define ASSERTIONS_ENABLED 1
+const int DEBUG_BUILD = 1;
+#define DEBUG_BUILD 1
 
 #if ASSERTIONS_ENABLED
 #define assert(expr)  if(expr){} else { reportAssertionFailure(#expr,  __FILE__, __LINE__);  __debugbreak();  } 

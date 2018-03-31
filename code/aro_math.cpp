@@ -22,57 +22,68 @@ float clamp(float in, float min, float max) {
   return in;
 }
 
+float normalizeDeg(float d) {
+  while(d <= -360) {
+    d = d + 360;
+  }
+  while(d >= 360) {
+    d = d-360;
+  }
+  return d;
+}
+
 ////////////// V2 ////////////////////////////////
-inline v2 V2(float X, float Y) {
+v2 V2(float X, float Y) {
   v2 v;
   v.x = X; 
   v.y = Y;
   return v;
 }
 
-inline v2 operator+(v2 a, v2 b) {
+v2 operator+(v2 a, v2 b) {
   v2 result; 
   result.x = a.x + b.x;
   result.y = a.y + b.y;
   return result;
 }
 
-inline v2 operator-(v2 a, v2 b) {
+v2 operator-(v2 a, v2 b) {
   v2 result; 
   result.x = a.x - b.x;
   result.y = a.y - b.y;
   return result;
 }
 
-inline v2 operator*(float a, v2 v) {
+v2 operator*(float a, v2 v) {
   v2 result; 
   result.x = v.x*a;
   result.y = v.y*a;
   return result;
 }
 
-inline v2 operator*=(v2 &v, float a) {
+v2 operator*=(v2 &v, float a) {
   v = a*v;
   return v;
 }
 
-inline v2 operator/(v2 v, float a) {
+v2 operator/(v2 v, float a) {
   v2 result; 
   float s = 1.0f/a;
   result.x = v.x*s;
   result.y = v.y*s;
+  return result;
 }
 
-inline v2 operator/=(v2 &v, float a) {
+v2 operator/=(v2 &v, float a) {
   v = v/a;
   return v;
 }
 
-inline float magnitude(const v2& v) {
+float magnitude(const v2& v) {
   return sqrt((v.x*v.x + v.y*v.y));
 }
 
-inline v2 normalize(const v2& v) {
+v2 normalize(const v2& v) {
   float mag = magnitude(v);
   if(mag==0) {
     return V2(0.0f,0.0f);
@@ -81,21 +92,21 @@ inline v2 normalize(const v2& v) {
 }
 
 
-inline v2i V2i(int X, int Y) {
+v2i V2i(int X, int Y) {
   v2i v;
   v.x = X; 
   v.y = Y;
   return v;
 }
 
-inline v2i operator+(v2i a, v2i b) {
+v2i operator+(v2i a, v2i b) {
   v2i result; 
   result.x = a.x + b.x;
   result.y = a.y + b.y;
   return result;
 }
 
-inline v2i operator-(v2i a, v2i b) {
+v2i operator-(v2i a, v2i b) {
   v2i result; 
   result.x = a.x - b.x;
   result.y = a.y - b.y;

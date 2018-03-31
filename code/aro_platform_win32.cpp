@@ -1,37 +1,6 @@
 #include <Windows.h>
-#include <stdint.h>
-
 #include "aro_generic.h"
 #include "aro_platform_win32.h"
-
-struct FileReadResult {
-    unsigned int contentsSize;
-    void *contents;
-};
-
-struct Bitmap {
-  int width, height;
-  void* contents;
-};
-
-//This should only be taken as me wanting to know how things work, it's not 
-//really a good/safe implementation by any stretch of imagination
-//Force byte alignment so header offests stay intact
-#pragma pack(push,1)
-struct BitmapHeader{
-  uint16_t bfType;
-  uint32_t bfSize;
-  uint16_t bfReserved1;
-  uint16_t bfReserved2;
-  uint32_t bfOffBits;
-  uint32_t biSize;
-  int32_t biWidth;
-  int32_t  biHeight;
-  uint16_t biPlanes;
-  uint16_t biBitCount;
-};
-#pragma pack(pop)
-
 
 FileReadResult readWholeFile(char* fileName) {
   FileReadResult result = {};
@@ -89,7 +58,7 @@ Bitmap loadBMP(char* fileName) {
   return result;
 }
 
-inline bool freeBMP(Bitmap* bitmap) {
+bool freeBMP(Bitmap* bitmap) {
   return VirtualFree(bitmap->contents, 0, MEM_RELEASE);
 }
 

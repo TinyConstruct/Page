@@ -25,13 +25,28 @@ static Win32WindowDimensions globalWindowDimensions;
 static Win32WindowLocation globalWindowLocation;
 static Player player;
 const float playerDistPerSec = .25;
+static LevelGeometry levelGeo;
 static Renderer renderer;
 KeyboardState keyboardState;
+
+bool isColliding(AABB a, AABB b) {
+  if (abs(a.center.x - b.center.x) > (a.rad.x + b.rad.x)) return false;
+  if (abs(a.center.y - b.center.y) > (a.rad.y + b.rad.y)) return false;
+  if (abs(a.center.z - b.center.z) > (a.rad.z + b.rad.z)) return false;
+  return true;
+}
+
 LRESULT CALLBACK
 win32MainWindowCallback(HWND window, UINT message, WPARAM WParam, LPARAM LParam) {       
   LRESULT result = 0;
   if(message == WM_KEYDOWN) {
     switch(WParam) {
+      #if DEBUG_BUILD
+      case 'L': {
+        renderer.renderDebug = !renderer.renderDebug;
+      }
+      break;
+      #endif
       case 'W': {
         keyboardState.moveForward = true;
       }
@@ -67,6 +82,12 @@ win32MainWindowCallback(HWND window, UINT message, WPARAM WParam, LPARAM LParam)
       case VK_RIGHT: {
         keyboardState.turnRight = true;
       } break;
+      case VK_SPACE: {
+        keyboardState.jump = true;
+      } break;
+      case VK_CONTROL: {
+        keyboardState.duck = true;
+      } break;
       default: {
         return result;
       } break;
@@ -95,6 +116,12 @@ win32MainWindowCallback(HWND window, UINT message, WPARAM WParam, LPARAM LParam)
       } break;
       case VK_RIGHT: {
         keyboardState.turnRight = false;
+      } break;
+      case VK_SPACE: {
+        keyboardState.jump = false;
+      } break;
+      case VK_CONTROL: {
+        keyboardState.duck = false;
       } break;
     }
   }
@@ -153,7 +180,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
   windowClass.hInstance = instance;
   //  windowClass.hIcon = ;
   windowClass.hCursor = LoadCursor(NULL, IDC_ARROW); 
-  //ShowCursor(FALSE);
+  ShowCursor(FALSE);
   windowClass.lpszClassName = "Page";
   if(RegisterClassA(&windowClass))
   {
@@ -198,21 +225,38 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
       float t = 0.0f;
       float spriteFlipCounter = 0.0f;
 
+      levelGeo.initialize();
+     
+      Mesh* floor = new Mesh(6, &renderer.level, &renderer.levelElements);
+      floor->addQuad(V3(-20.0, 0.0, -20.0), V3(-20.0, 0.0, 20.0), V3(20.0, 0.0, 20.0), V3(20.0, 0.0, -20.0), V3(1.0, 1.0, 0.0), &levelGeo);
+      renderer.meshes.push_back(floor);
+
+      Mesh* ceiling = new Mesh(6, &renderer.level, &renderer.levelElements);
+      ceiling->addQuad(V3(-20.0, 6.0, -20.0), V3(20.0, 6.0, -20.0), V3(20.0, 6.0, 20.0), V3(-20.0, 6.0, 20.0), V3(1.0, 1.0, 0.0), &levelGeo);
+      renderer.meshes.push_back(ceiling);
+
+      Mesh* northWall = new Mesh(6, &renderer.level, &renderer.levelElements);
+      northWall->addQuad(V3(-5.0, 3.0, -5.0), V3(-5.0, 0.0, -5.0), V3(5.0, 0.0, -5.0), V3(5.0, 3.0, -5.0), V3(1.0, 1.0, 0.0), &levelGeo);
+      renderer.meshes.push_back(northWall);
+
+      for(int i = 0; i < levelGeo.boundingBoxes.size(); i++) {
+        renderer.addDebugVolume(&levelGeo.boundingBoxes[i]);
+      }
+
       renderer.initialize();
       keyboardState.initialize();
-      player.center.x = 0.0f;
-      player.center.y = 1.70f;
-      player.center.z = 3.0f;
-      player.yRotation = -90.0f;
-      player.pitch = 0.0f;
+      player.initialize();
       POINT mousePoint;
       SetCursorPos(globalWindowLocation.centerX, globalWindowLocation.centerY);
       float time = 0;
-      float joggingSpeed = 2.6;
-      float walkingSpeed = 1.3;
-      float sprintSpeed = 7.10;
-      float mouseLookDampen = .5;
       renderer.aspectRatio = (float)globalWindowDimensions.width / (float) globalWindowDimensions.height;
+
+      v3 gravity = V3(0.0, -9.86, 0.0);
+      player.vel = V3(0.0,0.0,0.0);
+      player.acc = V3(0.0,0.0,0.0);
+      float mouseLookDampen = .5;
+      v3 playerOffset = V3(0.0,1.75,0.0);
+//// Main Game Loop ////////
       while(globalRunning)
       {
         //update timer
@@ -238,12 +282,13 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
           DispatchMessageA(&message);
         }
 
-        v3 viewDir = V3(0.0, 0.0, -1.0);
+        v3 viewDir;
         float pitch = degToRad(player.pitch);
         float yaw = degToRad(player.yRotation);
+        yaw = normalizeDeg(yaw);
 
         if(!keyboardState.pause){
-          //get mouse movement
+        //get mouse and keyboard movement if not paused
           GetCursorPos(&mousePoint);
           int mouseDifX = mousePoint.x - globalWindowLocation.centerX;
           int mouseDifY = mousePoint.y - globalWindowLocation.centerY;
@@ -261,30 +306,67 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
           viewDir.z = sin(yaw) * cos(pitch);
           viewDir = normalize(viewDir);
           v3 side = cross(viewDir, V3(0.0, 1.0, 0.0));
-          v3 movementDif = V3(0.0, 0.0, 0.0);
+          v3 upDir = cross(normalize(side), viewDir);
+          v3 movementDir = V3(0.0, 0.0, 0.0);
           if (keyboardState.moveForward) {
-            movementDif = movementDif + viewDir;
+            movementDir.x = movementDir.x + viewDir.x;
+            movementDir.z = movementDir.z + viewDir.z;
           }
           if (keyboardState.moveBackward) {
-            movementDif = movementDif - viewDir;
+            movementDir.x = movementDir.x - viewDir.x;
+            movementDir.z = movementDir.x - viewDir.z;
           }
           if (keyboardState.strafeRight) {
-            movementDif = movementDif + side;
+            movementDir = movementDir + side;
           }
           if (keyboardState.strafeLeft) {
-            movementDif = movementDif - side;
+            movementDir = movementDir - side;
           }
-          movementDif = normalize(movementDif);
-          player.center.x = player.center.x + (walkingSpeed * lastFrameSec * movementDif.x);
-          player.center.z = player.center.z + (walkingSpeed * lastFrameSec * movementDif.z);
+          if (keyboardState.jump && player.onGround) {
+            player.vel.y = sqrt(-.6*gravity.y); // vf*vf = -g*.6
+            player.onGround = false;
+          }
+          if (keyboardState.duck) {
+            movementDir = movementDir;
+          }
+
+          player.acc.y +=  lastFrameSec*gravity.y;
+          player.vel = player.vel + lastFrameSec*player.acc;
+          player.center = lastFrameSec*player.vel + player.center;
+          
+          AABB playerBox;
+          playerBox.rad = V3(.25,.25,.25);
+          movementDir = normalize(movementDir);
+          playerBox.center.x = player.center.x + (player.walkingSpeed * lastFrameSec * movementDir.x);
+          playerBox.center.y = player.center.y + (player.walkingSpeed * lastFrameSec * movementDir.y);
+          playerBox.center.z = player.center.z + (player.walkingSpeed * lastFrameSec * movementDir.z);
           player.viewDir = viewDir;
+          bool noCols = true;
+          if(player.center.y < .5) {
+            player.center.y = .5;
+            player.acc.y = 0.0;
+            player.vel.y = 0.0;
+            player.onGround = true;
+          }
+          //for(int i = 0; i < levelGeo.boundingBoxes.size(); i++) {
+          //  if(isColliding(playerBox, levelGeo.boundingBoxes[i])) {
+          //    noCols = false;
+          //    break;
+          //  }
+          //}
+          //if(noCols) {
+            player.center = playerBox.center;
+          //}
+        }
+        else {
+          //game is paused, draw pause screen/menu/whatever
         }
 
         glClearColor(1.0,0.0,1.0,1.0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glUseProgram(renderer.shaderID);
 
-        v3 cameraPosition = V3(player.center.x, player.center.y, player.center.z);//player.center.x, player.center.y, player.center.z);
+        v3 cameraPosition = V3(player.center.x, player.center.y, player.center.z) + playerOffset;
         
         m4x4 modelMat = identity();
         GLint modelID = glGetUniformLocation(renderer.shaderID, "model");
@@ -299,6 +381,12 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
 
         GLint projID = glGetUniformLocation(renderer.shaderID, "projection");
         glUniformMatrix4fv(projID, 1, GL_FALSE, (float*)projMat.n);
+
+        GLint lightID = glGetUniformLocation(renderer.shaderID, "lightPos");
+        glUniform3f(lightID, player.center.x, player.center.y, player.center.z);
+
+        GLint playerPosID = glGetUniformLocation(renderer.shaderID, "playerPos");
+        glUniform3f(playerPosID, player.center.x, player.center.y, player.center.z);
 
         renderer.draw();
         glFinish();

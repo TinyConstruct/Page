@@ -42,6 +42,7 @@ struct m4x4 {
 
 int clamp(int in, int min, int max);
 float clamp(float in, float min, float max);
+float normalizeDeg(float d);
 
 //V2 ////////////////////////////////
 v2 V2(float X, float Y);
