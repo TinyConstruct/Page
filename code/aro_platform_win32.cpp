@@ -1,4 +1,5 @@
 #include <Windows.h>
+#include <stdint.h>
 #include "aro_generic.h"
 #include "aro_platform_win32.h"
 

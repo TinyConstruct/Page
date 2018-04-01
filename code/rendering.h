@@ -1,8 +1,8 @@
 #ifndef __RENDERING__
 #define __RENDERING__
 
-#include "aro_platform_win32.h"
-#include "gamestate.h"
+#include "bitmap.h"
+
 enum {LEVEL_BUFFER};
 
 struct Vertpcnu {
@@ -66,8 +66,10 @@ public:
   void initialize();
   void draw();
   void addDebugVolume(AABB* box);
+  void loadTextureIntoArray(char* bmpPath, int width, int height);
 };
 
+GLuint createTextureArrayBuffer(int width, int height);
 GLuint loadTexture(Texture* texture, char* bmpPath);
 
 #endif //__RENDERING__

@@ -1,4 +1,8 @@
 #include <Windows.h>
+#include <stdint.h>
+#include <gl/gl.h>
+
+#include "aro_generic.h"
 #include "aro_platform_win32.h"
 #include "aro_opengl.h"
 
@@ -38,6 +42,9 @@ gl_delete_shader* glDeleteShader;
 gl_active_texture* glActiveTexture;
 gl_uniform_matrix4fv* glUniformMatrix4fv;
 gl_buffer_sub_data* glBufferSubData;
+gl_tex_storage_3d* glTexStorage3D;
+gl_tex_sub_image_3d* glTexSubImage3D;
+
 
 gl_debug_message_callback_arb* glDebugMessageCallbackARB;
 
@@ -118,7 +125,8 @@ static bool loadGLCoreFunctions() {
   if(!(glActiveTexture = (gl_active_texture*) getWin32GLFunc("glActiveTexture")) ){return false;}    
   if(!(glUniformMatrix4fv = (gl_uniform_matrix4fv*) getWin32GLFunc("glUniformMatrix4fv")) ){return false;}    
   if(!(glBufferSubData = (gl_buffer_sub_data*) getWin32GLFunc("glBufferSubData")) ){return false;}    
-
+  if(!(glTexStorage3D = (gl_tex_storage_3d*) getWin32GLFunc("glTexStorage3D")) ){return false;}
+  if(!(glTexSubImage3D = (gl_tex_sub_image_3d*) getWin32GLFunc("glTexSubImage3D")) ){return false;}
   return true;
 }
 
@@ -142,7 +150,7 @@ void win32InitOpenGL(HWND window) {
   if(wglMakeCurrent(windowDC, openGLRC)) { //creating doesn't make current
     wgl_create_context_attribs_arb* wglCreateContextAttribsARB = (wgl_create_context_attribs_arb*)wglGetProcAddress("wglCreateContextAttribsARB");
     if(wglCreateContextAttribsARB) {
-      int attribs[] = {WGL_CONTEXT_MAJOR_VERSION, 3,  WGL_CONTEXT_MINOR_VERSION, 3, 
+      int attribs[] = {WGL_CONTEXT_MAJOR_VERSION, 4,  WGL_CONTEXT_MINOR_VERSION, 5, 
       WGL_CONTEXT_FLAGS , WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB 
       #ifdef DEBUG
       | WGL_CONTEXT_DEBUG_BIT

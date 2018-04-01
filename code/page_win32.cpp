@@ -14,6 +14,7 @@
 
 #include "aro_generic.h"
 #include "aro_math.h"
+#include "level.h"
 #include "rendering.h"
 #include "aro_opengl.h"
 #include "aro_platform_win32.h"
@@ -256,6 +257,8 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
       player.acc = V3(0.0,0.0,0.0);
       float mouseLookDampen = .5;
       v3 playerOffset = V3(0.0,1.75,0.0);
+
+      //createTextureArrayBuffer(10,10);
 //// Main Game Loop ////////
       while(globalRunning)
       {

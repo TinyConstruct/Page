@@ -1,12 +1,15 @@
 #include <Windows.h>
-#include <gl/GL.h>
+#include <gl/gl.h>
 #include <math.h>
 #include <stdint.h>
 #include <vector>
 
+#include "aro_platform_win32.h"
 #include "aro_generic.h"
 #include "aro_opengl.h"
 #include "aro_math.h"
+#include "gamestate.h"
+#include "level.h"
 
 #include "rendering.h"
 
@@ -421,3 +424,37 @@ GLuint loadTexture(Texture* texture, char* bmpPath) {
   }
   return texID;
 }
+
+void loadTextureIntoArray(char* bmpPath, int width, int height) {
+  Texture texture;
+  texture.data = loadBMP(bmpPath);
+  assert(height == texture.data.height);
+  assert(width == texture.data.width);
+  
+  if(!freeBMP(&texture.data)) {
+    InvalidCodePath; //Failed to free bitmap
+  }
+}
+/*
+GLuint createTextureArrayBuffer(Bitmap* tex1, Bitmap* tex2, Bitmap* tex3, Bitmap* tex4, int width, int height) {
+  GLint maxTexDim, maxTexLayers, maxTexUnits;
+  glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTexDim);
+  glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &maxTexLayers);
+  glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &maxTexUnits);
+  int layerCount = maxTexDim/4/512;
+  //TODO: this probably wrong??? maxIndex/4 != maxBytes????
+  assert(maxTexDim/4 >= 2048);
+  assert(maxTexUnits >= 32); //Note: we know that this is just for the frag shader
+  GLuint texID;
+  glGenTextures(1, &texID);
+  glBindTexture(GL_TEXTURE_2D_ARRAY, texID);
+  glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_RGBA8, width, height, layerCount);
+
+  glTexSubImage3D(GL_TEXTURE_2D_ARRAY, texID, 0, 0, 0, width, height, layerCount, GL_RGBA, GL_UNSIGNED_BYTE, texels);
+
+  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  return texID;
+}
+
+*/

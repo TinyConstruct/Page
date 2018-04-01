@@ -1,4 +1,11 @@
 #include <vector>
+#include <Windows.h>
+#include <gl/gl.h>
+
+#include "aro_math.h"
+#include "level.h"
+#include "rendering.h"
+
 #include "gamestate.h"
 
 void KeyboardState::initialize() {
@@ -21,16 +28,6 @@ void Player::initialize() {
   joggingSpeed = 2.6;
   walkingSpeed = 1.3;
   sprintSpeed = 7.10;
-
 }
 
-void LevelGeometry::addAABB(v3 center, v3 rad) {
-  AABB box;
-  box.center = center;
-  box.rad = rad;
-  boundingBoxes.push_back(box);
-}
 
-void LevelGeometry::initialize() {
-  boundingBoxes.reserve(100);
-}

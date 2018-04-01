@@ -1,9 +1,5 @@
 #ifndef __ARO_OPENGL__
 #define __ARO_OPENGL__
-#include <Windows.h>
-#include <stdint.h>
-#include <GL/GL.h>
-#include "aro_generic.h"
 
 //These are windows specific
 #define WGL_CONTEXT_MAJOR_VERSION               0x2091
@@ -58,6 +54,10 @@
 #define GL_VERTEX_SHADER                          0x8B31
 #define GL_COMPILE_STATUS                         0x8B81
 #define GL_LINK_STATUS                            0x8B82
+
+#define GL_TEXTURE_2D_ARRAY                       0x8C1A
+#define GL_MAX_ARRAY_TEXTURE_LAYERS               0x88FF
+#define GL_MAX_TEXTURE_IMAGE_UNITS                0x8872
 
 #define GL_TEXTURE0                               0x84C0
 #define GL_TEXTURE1                               0x84C1
@@ -150,7 +150,10 @@ typedef void WINAPI gl_delete_shader (GLuint shader);
 typedef void WINAPI gl_active_texture(GLenum texture);
 typedef void WINAPI gl_uniform_matrix4fv (GLint location, GLsizei count, GLboolean transpose, const GLfloat *value);
 typedef void WINAPI gl_buffer_sub_data  (GLenum target, GLintptr offset, GLsizeiptr size, const void *data);
-typedef void WINAPI gl_debug_message_callback_arb(void* callback, void * userParam);
+typedef void WINAPI gl_debug_message_callback_arb (void* callback, void * userParam);
+typedef void WINAPI gl_tex_storage_3d (GLenum target, GLsizei levels, GLenum internalformat, GLsizei width, GLsizei height, GLsizei depth);
+typedef void WINAPI gl_tex_sub_image_3d (GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLenum type, const void *pixels);
+
 
 extern wgl_swap_interval_ext* wglSwapInterval;
 extern wgl_create_context_attribs_arb* wglCreateContextAttribsARB;
@@ -187,6 +190,8 @@ extern gl_delete_shader* glDeleteShader;
 extern gl_active_texture* glActiveTexture;
 extern gl_uniform_matrix4fv* glUniformMatrix4fv;
 extern gl_buffer_sub_data* glBufferSubData;
+extern gl_tex_storage_3d* glTexStorage3D;
+extern gl_tex_sub_image_3d* glTexSubImage3D;
 
 void win32InitOpenGL(HWND window);
 #endif //__ARO_OPENGL__
