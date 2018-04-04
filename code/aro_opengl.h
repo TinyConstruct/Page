@@ -92,6 +92,8 @@
 #define GL_TEXTURE30                              0x84DE
 #define GL_TEXTURE31                              0x84DF
 
+#define GL_CLAMP_TO_EDGE                          0x812F
+
 typedef ptrdiff_t GLsizeiptr;
 
 struct opengl_info{

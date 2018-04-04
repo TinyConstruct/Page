@@ -3,8 +3,9 @@
 #include <gl/gl.h>
 
 #include "aro_math.h"
-#include "level.h"
+#include "texture.h"
 #include "rendering.h"
+#include "level.h"
 
 #include "gamestate.h"
 

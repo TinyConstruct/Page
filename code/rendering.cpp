@@ -3,26 +3,27 @@
 #include <math.h>
 #include <stdint.h>
 #include <vector>
+#include <memory.h>  
 
 #include "aro_platform_win32.h"
 #include "aro_generic.h"
 #include "aro_opengl.h"
+#include "texture.h"
 #include "aro_math.h"
 #include "gamestate.h"
-#include "level.h"
 
 #include "rendering.h"
 
 const char* vertexSource = R"FOO(
-#version 330 core
+#version 450 core
 layout (location = 0) in vec3 position;
 layout (location = 1) in vec3 color;
 layout (location = 2) in vec3 normal;
-layout (location = 3) in vec2 texCoordIn;
+layout (location = 3) in vec3 texCoordIn;
 out vec3 colorOutFromVert;
 out vec3 normalOutFromVert;
 out vec3 fragPos;
-out vec2 texCoordOutFromVert;
+out vec3 texCoordOutFromVert;
 uniform mat4 projection;
 uniform mat4 view;
 uniform mat4 model;
@@ -38,18 +39,18 @@ void main()
 )FOO";
 
 const char* fragmentSource = R"FOO(
-#version 330 core
+#version 450 core
 in vec3 colorOutFromVert;
 in vec3 normalOutFromVert;
 in vec3 fragPos;
-in vec2 texCoordOutFromVert;
+in vec3 texCoordOutFromVert;
 uniform vec3 lightPos;
-uniform sampler2D textureData;
+uniform sampler2DArray textureData;
 uniform vec3 playerPos;
 out vec4 resultColor;
 void main()
 {
-  vec4 texColor = texture(textureData, texCoordOutFromVert);
+  vec4 texColor = texture(textureData, vec3(texCoordOutFromVert.xyz));
   vec3 lightColor = vec3(1.0,1.0,1.0);
   float ambientIntensity= .1;
   float specularIntensity = 1.0;
@@ -70,11 +71,13 @@ void main()
 )FOO";
 
 void Renderer::initialize() {
-  meshes.reserve(100);
+  //meshes.reserve(100);
   level.reserve(100);
   levelElements.reserve(100);
 
-  loadTexture(&metalBoxID, "data/metalbox.bmp");
+  //loadTexture(&metalBoxID, "data/metalbox.bmp");
+  
+  //textureArrayTest();
 
 // compile shaders///////////////////////////////////
   GLuint vertShader, fragShader;
@@ -143,7 +146,7 @@ void Renderer::initialize() {
   glVertexAttribPointer(normal, 3, GL_FLOAT, GL_FALSE, sizeof(Vertpcnu), (void*)(sizeof(v3)*2));
   glEnableVertexAttribArray(normal);
   GLint texCoord = glGetAttribLocation(shaderID, "texCoordIn");
-  glVertexAttribPointer(texCoord, 2, GL_FLOAT, GL_FALSE, sizeof(Vertpcnu), (void*)(sizeof(v3)*3));
+  glVertexAttribPointer(texCoord, 3, GL_FLOAT, GL_FALSE, sizeof(Vertpcnu), (void*)(sizeof(v3)*3));
   glEnableVertexAttribArray(texCoord);
 
   #if DEBUG_BUILD
@@ -163,6 +166,7 @@ void Renderer::initialize() {
   glEnable(GL_CULL_FACE);
 }
 
+/*
 void Mesh::addTri(Vertpcnu a, Vertpcnu b, Vertpcnu c) {
   v3 normal;
   v3 first = a.position - b.position;
@@ -194,10 +198,10 @@ void Mesh::addCube(v3 center, float width, v3 color) {
   d.color = color;
 
   //top
-  a.uv = V2(0.0,1.0);
-  b.uv = V2(0.0,0.0);
-  c.uv = V2(1.0,0.0);
-  d.uv = V2(1.0,1.0);
+  a.uv = V3(0.0,1.0,0.0);
+  b.uv = V3(0.0, 0.0, 0.0);
+  c.uv = V3(1.0, 0.0, 0.0);
+  d.uv = V3(1.0, 1.0, 0.0);
   a.position = (((center - zOff) + yOff) - xOff);
   b.position = (((center + zOff) + yOff) - xOff);
   c.position = (((center + zOff) + yOff) + xOff);
@@ -244,13 +248,13 @@ void Mesh::addCube(v3 center, float width, v3 color) {
 void Mesh::addQuad(v3 vert1, v3 vert2, v3 vert3, v3 vert4, v3 color) {
   Vertpcnu a, b, c, d;
   a.position = vert1;
-  a.uv = V2(0.0,0.0);
+  a.uv = V3(0.0, 0.0, 0.0);
   b.position = vert2;
-  b.uv = V2(0.0,1.0);
+  b.uv = V3(0.0, 1.0, 0.0);
   c.position = vert3;
-  c.uv = V2(1.0,1.0);
+  c.uv = V3(1.0, 1.0, 0.0);
   d.position = vert4;
-  d.uv = V2(1.0,0.0);
+  d.uv = V3(1.0, 0.0, 0.0);
   a.color = color;
   b.color = color;
   c.color = color;
@@ -262,13 +266,13 @@ void Mesh::addQuad(v3 vert1, v3 vert2, v3 vert3, v3 vert4, v3 color) {
 void Mesh::addQuad(v3 vert1, v3 vert2, v3 vert3, v3 vert4, v3 color, LevelGeometry* level) {
   Vertpcnu a, b, c, d;
   a.position = vert1;
-  a.uv = V2(0.0,0.0);
+  a.uv = V3(0.0, 0.0, 0.0);
   b.position = vert2;
-  b.uv = V2(0.0,1.0);
+  b.uv = V3(0.0, 1.0, 0.0);
   c.position = vert3;
-  c.uv = V2(1.0,1.0);
+  c.uv = V3(1.0, 1.0, 0.0);
   d.position = vert4;
-  d.uv = V2(1.0,0.0);
+  d.uv = V3(1.0, 0.0, 0.0);
   a.color = color;
   b.color = color;
   c.color = color;
@@ -289,7 +293,6 @@ void Mesh::addQuad(v3 vert1, v3 vert2, v3 vert3, v3 vert4, v3 color, LevelGeomet
     rad.z = max(0.2, (abs(b.position.z - a.position.z)/2.0));
   }
   level->addAABB(center, rad);
-
 }
 
 void Mesh::addCircle(v3 cirCenter, float rad, float numPts) {
@@ -299,13 +302,13 @@ void Mesh::addCircle(v3 cirCenter, float rad, float numPts) {
   newVert.normal = normal;
   center.normal = normal;
   center.position = cirCenter;
-  center.uv = V2(.5,.5);
+  center.uv = V3(.5, .5, 0.0);
   int centerIndex = elements->size();
   int index = centerIndex+1;
   float aCos = cos(0.0f);
   float aSin = sin(0.0f);
   float rot = 2*M_PI/numPts;
-  oldVert.uv = V2((aCos+1)/2, (aSin+1)/2);
+  oldVert.uv = V3((aCos + 1) / 2, (aSin + 1) / 2, 0.0);
   oldVert.position = V3(aCos*rad, center.position.y, aSin*rad);
 
   verts->push_back(center);
@@ -314,7 +317,7 @@ void Mesh::addCircle(v3 cirCenter, float rad, float numPts) {
     float bCos = cos((i)*rot);
     float bSin = sin((i)*rot);
     
-    newVert.uv = V2((bCos+1)/2, (bSin+1)/2);
+    newVert.uv = V3((bCos + 1) / 2, (bSin + 1) / 2, 0.0);
     newVert.position = V3(bCos*rad, center.position.y, bSin*rad);
     verts->push_back(newVert);
     
@@ -324,6 +327,7 @@ void Mesh::addCircle(v3 cirCenter, float rad, float numPts) {
     index += 1;
   }
 }
+*/
 
 
 void Renderer::draw() {
@@ -339,7 +343,7 @@ void Renderer::draw() {
   glVertexAttribPointer(normal, 3, GL_FLOAT, GL_FALSE, sizeof(Vertpcnu), (void*)(sizeof(v3)*2));
   glEnableVertexAttribArray(normal);
   GLint texCoord = glGetAttribLocation(shaderID, "texCoordIn");
-  glVertexAttribPointer(texCoord, 2, GL_FLOAT, GL_FALSE, sizeof(Vertpcnu), (void*)(sizeof(v3)*3));
+  glVertexAttribPointer(texCoord, 3, GL_FLOAT, GL_FALSE, sizeof(Vertpcnu), (void*)(sizeof(v3)*3));
   glEnableVertexAttribArray(texCoord);
 
   glDrawElements(GL_TRIANGLES, levelElements.size(), GL_UNSIGNED_INT, 0);
@@ -355,11 +359,10 @@ void Renderer::draw() {
   #endif
 }
 
-void Renderer::addDebugVolume(AABB* box) {
-  v3 center, newVert, offset;
+void Renderer::addDebugVolume(const v3& center, const v3& rad) {
+  v3 newVert, offset;
   int startingIndex = debugBoundingVerts.size();
-  center = box->center;
-  offset = box->rad;
+  offset = rad;
   //front plane
   newVert = V3(center.x - offset.x, center.y + offset.y, center.z + offset.z);//0
   debugBoundingVerts.push_back(newVert);
@@ -425,7 +428,7 @@ GLuint loadTexture(Texture* texture, char* bmpPath) {
   return texID;
 }
 
-void loadTextureIntoArray(char* bmpPath, int width, int height) {
+void loadTextureIntoArray(char* bmpPath, TextureHandle* th, int width, int height) {
   Texture texture;
   texture.data = loadBMP(bmpPath);
   assert(height == texture.data.height);
@@ -435,26 +438,114 @@ void loadTextureIntoArray(char* bmpPath, int width, int height) {
     InvalidCodePath; //Failed to free bitmap
   }
 }
-/*
-GLuint createTextureArrayBuffer(Bitmap* tex1, Bitmap* tex2, Bitmap* tex3, Bitmap* tex4, int width, int height) {
+
+GLuint Renderer::createTextureArrayBuffer(int width, int height) {
+  /*
   GLint maxTexDim, maxTexLayers, maxTexUnits;
   glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTexDim);
   glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &maxTexLayers);
   glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &maxTexUnits);
-  int layerCount = maxTexDim/4/512;
+  int layerCount = maxTexDim/4/texDim;
   //TODO: this probably wrong??? maxIndex/4 != maxBytes????
   assert(maxTexDim/4 >= 2048);
   assert(maxTexUnits >= 32); //Note: we know that this is just for the frag shader
+*/
+  assert(width == height);
+  int layerCount = 2048/height;
   GLuint texID;
   glGenTextures(1, &texID);
   glBindTexture(GL_TEXTURE_2D_ARRAY, texID);
   glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_RGBA8, width, height, layerCount);
-
-  glTexSubImage3D(GL_TEXTURE_2D_ARRAY, texID, 0, 0, 0, width, height, layerCount, GL_RGBA, GL_UNSIGNED_BYTE, texels);
-
   glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   return texID;
 }
 
-*/
+void Renderer::loadTextureArray512(int aID, char* aPath, int bID, char* bPath, int cID, char* cPath, int dID, char* dPath){
+  GLuint texID = createTextureArrayBuffer(512,512);
+  Bitmap aBMP, bBMP, cBMP, dBMP;
+  int cpyOffset = 512*512*4;
+  char* buffer = (char*)VirtualAlloc(0, 512*512*4*4, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
+  char* cpyDest = buffer;
+  if(buffer && aPath!=NULL) {
+    aBMP = loadBMP(aPath);
+    memcpy(cpyDest, (char*)aBMP.contents, cpyOffset);
+    cpyDest += cpyOffset;
+    freeBMP(&aBMP);
+    texTable[aID].glTextureNum = texID;
+    texTable[aID].texLayer = 0;
+  }
+  else {
+    InvalidCodePath;
+  }
+  if(bPath!=NULL) {
+    bBMP = loadBMP(bPath);
+    memcpy(cpyDest, bBMP.contents, cpyOffset);
+    cpyDest += cpyOffset;
+    freeBMP(&bBMP);
+    texTable[bID].glTextureNum = texID;
+    texTable[bID].texLayer = 1;
+  }
+  if(cPath!=NULL) {
+    cBMP = loadBMP(cPath);
+    memcpy(cpyDest, cBMP.contents, cpyOffset);
+    cpyDest += cpyOffset;
+    freeBMP(&cBMP);
+    texTable[cID].glTextureNum = texID;
+    texTable[cID].texLayer = 2;
+  }
+  if(dPath!=NULL) {
+    dBMP = loadBMP(dPath);
+    memcpy(cpyDest, dBMP.contents, cpyOffset);
+    freeBMP(&dBMP);
+    texTable[dID].glTextureNum = texID;
+    texTable[dID].texLayer = 3;
+  }
+  glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, 0, 512, 512, 4, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
+  VirtualFree(buffer, 0, MEM_RELEASE);
+}
+
+void Renderer::textureArrayTest(){
+  GLuint texID = 0;
+  GLubyte buffer[32] = {
+     // Texels for first image.
+     0,   0,   0,   255,
+     255, 0,   0,   255,
+     0,   255, 0,   255,
+     0,   0,   255, 255,
+     // Texels for second image.
+     255, 255, 255, 255,
+     255, 255,   0, 255,
+     0,   255, 255, 255,
+     255, 0,   255, 255,
+  };
+  glGenTextures(1, &texID);
+  glBindTexture(GL_TEXTURE_2D_ARRAY, texID);
+  glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_RGBA8, 2, 2, 2);
+  glTexSubImage3D(GL_TEXTURE_2D_ARRAY, texID, 0, 0, 0, 2, 2, 2, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
+
+  glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
+}
+
+TextureHandle Renderer::getGLTexID(int texID) {
+  TextureHandle th = texTable[texID];
+  return th;
+}
+
+void Renderer::addTri(Vertpcnu& a, Vertpcnu& b, Vertpcnu& c) {
+  v3 normal;
+  v3 first = a.position - b.position;
+  v3 second = c.position - b.position;
+  normal = normalize(cross(second, first));
+  a.normal = normal;
+  b.normal = normal;
+  c.normal = normal;
+  int index = levelElements.size();
+  level.push_back(a);
+  levelElements.push_back(index++);
+  level.push_back(b);
+  levelElements.push_back(index++);
+  level.push_back(c);
+  levelElements.push_back(index++);
+}

@@ -14,8 +14,9 @@
 
 #include "aro_generic.h"
 #include "aro_math.h"
-#include "level.h"
+#include "texture.h"
 #include "rendering.h"
+#include "level.h"
 #include "aro_opengl.h"
 #include "aro_platform_win32.h"
 #include "gamestate.h"
@@ -27,8 +28,10 @@ static Win32WindowLocation globalWindowLocation;
 static Player player;
 const float playerDistPerSec = .25;
 static LevelGeometry levelGeo;
+static LevelData levelData;
 static Renderer renderer;
 KeyboardState keyboardState;
+static TextureHandle texTable[MAX_TEX];
 
 bool isColliding(AABB a, AABB b) {
   if (abs(a.center.x - b.center.x) > (a.rad.x + b.rad.x)) return false;
@@ -226,22 +229,16 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
       float t = 0.0f;
       float spriteFlipCounter = 0.0f;
 
+      //load assets
+      renderer.loadTextureArray512(FLOOR1, "data/floor1.bmp", FLOOR2, "data/floor2.bmp", 
+        WALL2, "data/wall2.bmp", CEIL1, "data/ceil1.bmp");
+      //load level geometry/data
+      levelData.initialize(&levelGeo, &renderer);
       levelGeo.initialize();
-     
-      Mesh* floor = new Mesh(6, &renderer.level, &renderer.levelElements);
-      floor->addQuad(V3(-20.0, 0.0, -20.0), V3(-20.0, 0.0, 20.0), V3(20.0, 0.0, 20.0), V3(20.0, 0.0, -20.0), V3(1.0, 1.0, 0.0), &levelGeo);
-      renderer.meshes.push_back(floor);
-
-      Mesh* ceiling = new Mesh(6, &renderer.level, &renderer.levelElements);
-      ceiling->addQuad(V3(-20.0, 6.0, -20.0), V3(20.0, 6.0, -20.0), V3(20.0, 6.0, 20.0), V3(-20.0, 6.0, 20.0), V3(1.0, 1.0, 0.0), &levelGeo);
-      renderer.meshes.push_back(ceiling);
-
-      Mesh* northWall = new Mesh(6, &renderer.level, &renderer.levelElements);
-      northWall->addQuad(V3(-5.0, 3.0, -5.0), V3(-5.0, 0.0, -5.0), V3(5.0, 0.0, -5.0), V3(5.0, 3.0, -5.0), V3(1.0, 1.0, 0.0), &levelGeo);
-      renderer.meshes.push_back(northWall);
+      levelData.bakeTestLevel();
 
       for(int i = 0; i < levelGeo.boundingBoxes.size(); i++) {
-        renderer.addDebugVolume(&levelGeo.boundingBoxes[i]);
+        renderer.addDebugVolume(levelGeo.boundingBoxes[i].center, levelGeo.boundingBoxes[i].rad);
       }
 
       renderer.initialize();
@@ -338,19 +335,13 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
           player.center = lastFrameSec*player.vel + player.center;
           
           AABB playerBox;
-          playerBox.rad = V3(.25,.25,.25);
           movementDir = normalize(movementDir);
           playerBox.center.x = player.center.x + (player.walkingSpeed * lastFrameSec * movementDir.x);
           playerBox.center.y = player.center.y + (player.walkingSpeed * lastFrameSec * movementDir.y);
           playerBox.center.z = player.center.z + (player.walkingSpeed * lastFrameSec * movementDir.z);
           player.viewDir = viewDir;
           bool noCols = true;
-          if(player.center.y < .5) {
-            player.center.y = .5;
-            player.acc.y = 0.0;
-            player.vel.y = 0.0;
-            player.onGround = true;
-          }
+
           //for(int i = 0; i < levelGeo.boundingBoxes.size(); i++) {
           //  if(isColliding(playerBox, levelGeo.boundingBoxes[i])) {
           //    noCols = false;
@@ -360,6 +351,12 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
           //if(noCols) {
             player.center = playerBox.center;
           //}
+          if(player.center.y < .5) {
+            player.center.y = .5;
+            player.acc.y = 0.0;
+            player.vel.y = 0.0;
+            player.onGround = true;
+          }
         }
         else {
           //game is paused, draw pause screen/menu/whatever
@@ -371,6 +368,13 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
 
         v3 cameraPosition = V3(player.center.x, player.center.y, player.center.z) + playerOffset;
         
+        char buffer[512];
+        sprintf_s(buffer, "Center: x %f y %f z %f\n", player.center.x, player.center.y, player.center.z);
+        OutputDebugStringA(buffer);
+        
+        sprintf_s(buffer, "Player view: x %f y %f z %f\n", viewDir.x, viewDir.y, viewDir.z);
+        OutputDebugStringA(buffer);
+
         m4x4 modelMat = identity();
         GLint modelID = glGetUniformLocation(renderer.shaderID, "model");
         glUniformMatrix4fv(modelID, 1, GL_FALSE, (float*)modelMat.n);
