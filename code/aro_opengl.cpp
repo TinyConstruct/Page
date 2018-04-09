@@ -44,8 +44,9 @@ gl_uniform_matrix4fv* glUniformMatrix4fv;
 gl_buffer_sub_data* glBufferSubData;
 gl_tex_storage_3d* glTexStorage3D;
 gl_tex_sub_image_3d* glTexSubImage3D;
-
-
+gl_uniform_block_binding* glUniformBlockBinding;
+gl_get_uniform_block_index* glGetUniformBlockIndex;
+gl_bind_buffer_range* glBindBufferRange;
 gl_debug_message_callback_arb* glDebugMessageCallbackARB;
 
 opengl_info checkOpenGLExtensions() {
@@ -127,6 +128,9 @@ static bool loadGLCoreFunctions() {
   if(!(glBufferSubData = (gl_buffer_sub_data*) getWin32GLFunc("glBufferSubData")) ){return false;}    
   if(!(glTexStorage3D = (gl_tex_storage_3d*) getWin32GLFunc("glTexStorage3D")) ){return false;}
   if(!(glTexSubImage3D = (gl_tex_sub_image_3d*) getWin32GLFunc("glTexSubImage3D")) ){return false;}
+  if(!(glUniformBlockBinding = (gl_uniform_block_binding*) getWin32GLFunc("glUniformBlockBinding")) ){return false;}
+  if(!(glGetUniformBlockIndex = (gl_get_uniform_block_index*) getWin32GLFunc("glGetUniformBlockIndex")) ){return false;}
+  if(!(glBindBufferRange = (gl_bind_buffer_range*) getWin32GLFunc("glBindBufferRange")) ){return false;}
   return true;
 }
 

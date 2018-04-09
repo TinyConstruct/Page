@@ -23,8 +23,11 @@ struct v2i {
   int x,y;
 };
 
-struct v3 {
-  float x,y,z;
+union v3 {
+  struct { 
+    float x,y,z;
+  };
+  float n[3];
 };
 
 struct v4 {
@@ -35,8 +38,11 @@ struct p3 {
   float x,y,z;
 };
 
+struct m3x3 {
+    float n[3][3];
+};
+
 struct m4x4 {
-    //Row major!
     float n[4][4];
 };
 

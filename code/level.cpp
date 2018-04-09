@@ -6,15 +6,26 @@
 #include "rendering.h"
 
 #include "level.h"
-void LevelGeometry::addAABB(v3 center, v3 rad) {
+void LevelGeometry::addAABB(v3& center, v3& rad) {
   AABB box;
   box.center = center;
   box.rad = rad;
-  boundingBoxes.push_back(box);
+  AABBs.push_back(box);
 }
 
 void LevelGeometry::initialize() {
-  boundingBoxes.reserve(100);
+  AABBs.reserve(100);
+  OBBs.reserve(100);
+}
+
+void LevelGeometry::addOOB(v3& center, v3 axes[3], v3& halfW) {
+  OBB box;
+  box.c = center;
+  box.u[0] = axes[0];
+  box.u[1] = axes[1];
+  box.u[2] = axes[2];
+  box.width = halfW;
+  OBBs.push_back(box);
 }
 
 void LevelData::initialize(LevelGeometry* g, Renderer* r) {
@@ -34,8 +45,34 @@ void LevelData::addTexturedQuad(v3& vert1, v3& vert2, v3& vert3, v3& vert4, int 
   quads->push_back(q);
 }
 
+void LevelData::addTexturedQuad(v3& vert1, v3& vert2, v3& vert3, v3& vert4, int texID, LevelGeometry* level) {
+  TexturedQuad q;
+  q.a = vert1;
+  q.b = vert2;
+  q.c = vert3;
+  q.d = vert4;
+  q.texHandle = renderer->getGLTexID(texID);
+  quads->push_back(q);
+  /*
+  v3 center = .5*(q.a - q.c) + q.c;
+  v3 rad;
+  //note: currently assuming axis-aligned, either wall or floor
+  if(q.a.y == q.b.y) {//floor or ceiling
+    rad.x = magnitude(q.a - q.b)/2.0;
+    rad.y = 0.2;
+    rad.z = magnitude(q.b- q.c)/2.0;
+  }
+  else {
+    rad.x = max(0.2, 1.05*(abs(q.b.x - q.c.x)/2.0));
+    rad.y = 1.05*(abs(q.b.y - q.a.y) / 2.0);
+    rad.z = max(0.2, (abs(q.b.z - q.a.z)/2.0));
+  }
+  level->addAABB(center, rad);*/
+}
+
 void LevelData::finalizeQuads() {
   for(int i = 0; i < quads->size(); i++){
+  //add rendering information: 
     Vertpcnu a, b, c, d;
     a.position = (*quads)[i].a;
     a.uv = V3(0.0, 1.0, (*quads)[i].texHandle.texLayer);
@@ -49,18 +86,48 @@ void LevelData::finalizeQuads() {
     renderer->addTri(c, d, a);
     v3 center = .5*(a.position - c.position) + c.position;
     v3 rad;
-    //note: currently assuming axis-aligned, either wall or floor
-    if(a.position.y == b.position.y) {//floor or ceiling
-      rad.x = magnitude(a.position - b.position)/2.0;
-      rad.y = 0.2;
-      rad.z = magnitude(b.position - c.position)/2.0;
+  //add collision geometry:
+    //test if axis aligned
+    if( ((a.position.x == b.position.x) && (b.position.x == c.position.x) &&
+          (c.position.x == d.position.x)) || 
+        ((a.position.y == b.position.y) && (b.position.y == c.position.y) &&
+          (c.position.y == d.position.y)) ||
+        ((a.position.z == b.position.z) && (b.position.z == c.position.z) &&
+          (c.position.z == d.position.z)) ){
+      if(a.position.y == b.position.y) {//floor or ceiling
+        rad.x = magnitude(a.position - b.position)/2.0;
+        rad.y = 0.2;
+        rad.z = magnitude(b.position - c.position)/2.0;
+      }
+      else {
+        rad.x = max(0.2, 1.05*(abs(b.position.x - c.position.x)/2.0));
+        rad.y = 1.05*(abs(b.position.y - a.position.y) / 2.0);
+        rad.z = max(0.2, (abs(b.position.z - a.position.z)/2.0));
+      }
+      geo->addAABB(center, rad);
     }
+    //if not axis aligned, create a bounding box along local axes
+    //note: assume rectangle for now
     else {
-      rad.x = max(0.2, 1.05*(abs(b.position.x - c.position.x)/2.0));
-      rad.y = 1.05*(abs(b.position.y - a.position.y) / 2.0);
-      rad.z = max(0.2, (abs(b.position.z - a.position.z)/2.0));
+      v3 axes[3];
+      v3 dir1, dir2;
+      dir1 = d.position - a.position;
+      dir2 = a.position - b.position;
+
+      axes[0] = normalize(dir1);
+      axes[1] = normalize(dir2);
+      axes[2] = cross(axes[0], axes[1]);
+
+      //renderer->debugDrawLine(center, center + 20*rad.x*axes[0]);
+      renderer->debugDrawLine(center, center + 20*rad.y*axes[1]);
+      renderer->debugDrawLine(center, center + 20*rad.z*axes[2]);
+
+      rad.x = magnitude(dir1)*1.1/2.0;
+      rad.y = magnitude(dir2)*1.1/2.0;
+      rad.z = 0.1;
+
+      geo->addOOB(center, axes, rad);
     }
-    //level->addAABB(center, rad);
   }
 }
 
@@ -69,10 +136,81 @@ void LevelData::bakeTestLevel() {
   addTexturedQuad(V3(-20.0, 0.0, -20.0), V3(-20.0, 0.0, 20.0), V3(20.0, 0.0, 20.0), V3(20.0, 0.0, -20.0),  FLOOR1);
   addTexturedQuad(V3(-20.0, 6.0, -20.0), V3(20.0, 6.0, -20.0), V3(20.0, 6.0, 20.0), V3(-20.0, 6.0, 20.0),  CEIL1);
   addTexturedQuad(V3(-1.5, 3.0, -5.0), V3(-1.5, 0.0, -5.0), V3(1.5, 0.0, -5.0), V3(1.5, 3.0, -5.0),  WALL2);
+  addTexturedQuad(V3(-3.5, 3.0, -3.0), V3(-3.5, 3.0, 0.0), V3(0.0, 1.0, 0.0), V3(0.0, 1.0, -3.0),  WALL2);
   //other buffer: (tri, TEX_NUM)
   //sort on getGLTexID(TEX_NUM) for both buffers
   //send quads/tris to renderer
   finalizeQuads();
   //send quads/tris to LevelGeometry for bounding boxes
+}
 
+int LevelGeometry::TestOBBOBB(OBB& a, OBB& b) {
+  float ra, rb;
+  float EPSILON = .001;
+  m3x3 R, AbsR;
+  // Compute rotation matrix expressing b in a’s coordinate frame
+  for (int i = 0; i < 3; i++)
+    for (int j = 0; j < 3; j++)
+      R.n[i][j] = dot(a.u[i], b.u[j]);
+
+  // Compute translation vector t
+  v3 t = b.c - a.c;
+  // Bring translation into a’s coordinate frame
+  t = V3(dot(t, a.u[0]), dot(t, a.u[2]), dot(t, a.u[2]));
+  // Compute common subexpressions. Add in an epsilon term to
+  // counteract arithmetic errors when two edges are parallel and
+  // their cross product is (near) null (see text for details)
+  for (int i = 0; i < 3; i++)
+    for (int j = 0; j < 3; j++)
+      AbsR.n[i][j] = abs(R.n[i][j]) + EPSILON;
+  // Test axes L = A0, L = A1, L = A2
+  for (int i = 0; i < 3; i++) {
+    ra = a.width.n[i];
+    rb = b.width.n[0] * AbsR.n[i][0] + b.width.n[1] * AbsR.n[i][1] + b.width.n[2] * AbsR.n[i][2];
+    if (abs(t.n[i]) > ra + rb) return 0;
+  }
+  // Test axes L = B0, L = B1, L = B2
+  for (int i = 0; i < 3; i++) {
+    ra = a.width.n[0] * AbsR.n[0][i] + a.width.n[1] * AbsR.n[1][i] + a.width.n[2] * AbsR.n[2][i];
+    rb = b.width.n[i];
+    if (abs(t.n[0] * R.n[0][i] + t.n[1] * R.n[1][i] + t.n[2] * R.n[2][i]) > ra + rb) return 0;
+  }
+  // Test axis L = A0 x B0
+  ra = a.width.n[1] * AbsR.n[2][0] + a.width.n[2] * AbsR.n[1][0];
+  rb = b.width.n[1] * AbsR.n[0][2] + b.width.n[2] * AbsR.n[0][1];
+  if (abs(t.n[2] * R.n[1][0] - t.n[1] * R.n[2][0]) > ra + rb) return 0;
+  // Test axis L = A0 x B1
+  ra = a.width.n[1] * AbsR.n[2][1] + a.width.n[2] * AbsR.n[1][1];
+  rb = b.width.n[0] * AbsR.n[0][2] + b.width.n[2] * AbsR.n[0][0];
+  if (abs(t.n[2] * R.n[1][1] - t.n[1] * R.n[2][1]) > ra + rb) return 0;
+  // Test axis L = A0 x B2
+  ra = a.width.n[1] * AbsR.n[2][2] + a.width.n[2] * AbsR.n[1][2];
+  rb = b.width.n[0] * AbsR.n[0][1] + b.width.n[1] * AbsR.n[0][0];
+  if (abs(t.n[2] * R.n[1][2] - t.n[1] * R.n[2][2]) > ra + rb) return 0;
+  // Test axis L = A1 x B0
+  ra = a.width.n[0] * AbsR.n[2][0] + a.width.n[2] * AbsR.n[0][0];
+  rb = b.width.n[1] * AbsR.n[1][2] + b.width.n[2] * AbsR.n[1][1];
+  if (abs(t.n[0] * R.n[2][0] - t.n[2] * R.n[0][0]) > ra + rb) return 0;
+  // Test axis L = A1 x B1
+  ra = a.width.n[0] * AbsR.n[2][1] + a.width.n[2] * AbsR.n[0][1];
+  rb = b.width.n[0] * AbsR.n[1][2] + b.width.n[2] * AbsR.n[1][0];
+  if (abs(t.n[0] * R.n[2][1] - t.n[2] * R.n[0][1]) > ra + rb) return 0;
+  // Test axis L = A1 x B2
+  ra = a.width.n[0] * AbsR.n[2][2] + a.width.n[2] * AbsR.n[0][2];
+  rb = b.width.n[0] * AbsR.n[1][1] + b.width.n[1] * AbsR.n[1][0];
+  if (abs(t.n[0] * R.n[2][2] - t.n[2] * R.n[0][2]) > ra + rb) return 0;
+  // Test axis L = A2 x B0
+  ra = a.width.n[0] * AbsR.n[1][0] + a.width.n[1] * AbsR.n[0][0];
+  rb = b.width.n[1] * AbsR.n[2][2] + b.width.n[2] * AbsR.n[2][1];
+  if (abs(t.n[1] * R.n[0][0] - t.n[0] * R.n[1][0]) > ra + rb) return 0;
+  // Test axis L = A2 x B1
+  ra = a.width.n[0] * AbsR.n[1][1] + a.width.n[1] * AbsR.n[0][1];
+  rb = b.width.n[0] * AbsR.n[2][2] + b.width.n[2] * AbsR.n[2][0];
+  if (abs(t.n[1] * R.n[0][1] - t.n[0] * R.n[1][1]) > ra + rb) return 0;
+  // Test axis L = A2 x B2
+  ra = a.width.n[0] * AbsR.n[1][2] + a.width.n[1] * AbsR.n[0][2];
+  rb = b.width.n[0] * AbsR.n[2][1] + b.width.n[1] * AbsR.n[2][0];
+  if (abs(t.n[1] * R.n[0][2] - t.n[0] * R.n[1][2]) > ra + rb) return 0;
+  // Since no separating axis is found, the OBBs must be intersecting
+  return 1;
 }

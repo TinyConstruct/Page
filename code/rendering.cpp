@@ -13,7 +13,6 @@
 #include "gamestate.h"
 
 #include "rendering.h"
-
 const char* vertexSource = R"FOO(
 #version 450 core
 layout (location = 0) in vec3 position;
@@ -26,12 +25,37 @@ out vec3 fragPos;
 out vec3 texCoordOutFromVert;
 uniform mat4 projection;
 uniform mat4 view;
-uniform mat4 model;
 
 void main()
 {
   gl_Position =  projection * view * vec4(position.x, position.y, position.z, 1.0f);
-  fragPos = (model * vec4(position.x, position.y, position.z, 1.0f)).xyz;
+  fragPos = position.xyz;
+  colorOutFromVert = color;
+  normalOutFromVert = normal;
+  texCoordOutFromVert = texCoordIn;
+}
+)FOO";
+
+const char* vertexSourceUBUF = R"FOO(
+#version 450 core
+layout (location = 0) in vec3 position;
+layout (location = 1) in vec3 color;
+layout (location = 2) in vec3 normal;
+layout (location = 3) in vec3 texCoordIn;
+layout(std140) uniform GlobalMatrices {
+  mat4 view;
+  mat4 projection;
+  vec3 playerPos;
+};
+out vec3 colorOutFromVert;
+out vec3 normalOutFromVert;
+out vec3 fragPos;
+out vec3 texCoordOutFromVert;
+
+void main()
+{
+  gl_Position =  projection * view * vec4(position.x, position.y, position.z, 1.0f);
+  fragPos = position.xyz;
   colorOutFromVert = color;
   normalOutFromVert = normal;
   texCoordOutFromVert = texCoordIn;
@@ -39,6 +63,41 @@ void main()
 )FOO";
 
 const char* fragmentSource = R"FOO(
+#version 450 core
+uniform sampler2DArray textureData;
+in vec3 colorOutFromVert;
+in vec3 normalOutFromVert;
+in vec3 fragPos;
+in vec3 texCoordOutFromVert;
+layout(std140) uniform GlobalMatrices {
+  mat4 view;
+  mat4 projection;
+  vec3 playerPos;
+};
+out vec4 resultColor;
+void main()
+{
+  vec3 lightPos = playerPos;
+  vec4 texColor = texture(textureData, vec3(texCoordOutFromVert.xyz));
+  vec3 lightColor = vec3(1.0,1.0,1.0);
+  float ambientIntensity= .1;
+  float specularIntensity = 1.0;
+  vec3 viewerDir = normalize(playerPos - fragPos);
+  vec3 lightDir = normalize(lightPos - fragPos);
+  vec3 norm = normalize(normalOutFromVert);
+  vec3 reflectedDir = reflect(-lightDir, norm);
+
+  float spec = pow(max(dot(viewerDir, reflectedDir), 0.0), 32);
+
+  float diff = max(dot(norm, lightDir), 0.0);
+  vec3 ambient = lightColor*ambientIntensity;
+  vec3 diffuse = diff * lightColor;
+  vec3 specular = specularIntensity * spec * lightColor;  
+  resultColor = (vec4((ambient + diffuse + specular), 1.0) * vec4(texColor.rgb, 1.0));
+}
+)FOO";
+
+const char* debugFragmentSource = R"FOO(
 #version 450 core
 in vec3 colorOutFromVert;
 in vec3 normalOutFromVert;
@@ -65,25 +124,15 @@ void main()
   vec3 ambient = lightColor*ambientIntensity;
   vec3 diffuse = diff * lightColor;
   vec3 specular = specularIntensity * spec * lightColor;  
-  resultColor = (vec4((ambient + diffuse + specular), 1.0) * vec4(texColor.rgb, 1.0));
-  
+  resultColor = (vec4((ambient + diffuse + specular), 1.0) * vec4(texColor.rgb, 0.5));
 }
 )FOO";
 
-void Renderer::initialize() {
-  //meshes.reserve(100);
-  level.reserve(100);
-  levelElements.reserve(100);
-
-  //loadTexture(&metalBoxID, "data/metalbox.bmp");
-  
-  //textureArrayTest();
-
-// compile shaders///////////////////////////////////
+void compileShader(GLuint* shaderID, const char* vSrc, const char* fSrc) {
   GLuint vertShader, fragShader;
   int success;
   vertShader = glCreateShader(GL_VERTEX_SHADER);
-  glShaderSource(vertShader, 1, &vertexSource, NULL);
+  glShaderSource(vertShader, 1, &vSrc, NULL);
   glCompileShader(vertShader);
   // print compile errors if any
   glGetShaderiv(vertShader, GL_COMPILE_STATUS, &success);
@@ -95,7 +144,7 @@ void Renderer::initialize() {
   }
 
   fragShader = glCreateShader(GL_FRAGMENT_SHADER);
-  glShaderSource(fragShader, 1, &fragmentSource, NULL);
+  glShaderSource(fragShader, 1, &fSrc, NULL);
   glCompileShader(fragShader);
   // print compile errors if any
   glGetShaderiv(fragShader, GL_COMPILE_STATUS, &success);
@@ -107,34 +156,46 @@ void Renderer::initialize() {
   }
 
   // shader Program
-  shaderID = glCreateProgram();
-  glAttachShader(shaderID, vertShader);
-  glAttachShader(shaderID, fragShader);
-  glLinkProgram(shaderID);
+  *shaderID = glCreateProgram();
+  glAttachShader(*shaderID, vertShader);
+  glAttachShader(*shaderID, fragShader);
+  glLinkProgram(*shaderID);
   // print linking errors if any
-  glGetProgramiv(shaderID, GL_LINK_STATUS, &success);
+  glGetProgramiv(*shaderID, GL_LINK_STATUS, &success);
   if(!success)
   {
     char buffer[512];
-    glGetProgramInfoLog(shaderID, 512, NULL, buffer);
+    glGetProgramInfoLog(*shaderID, 512, NULL, buffer);
     OutputDebugString(buffer);
     InvalidCodePath;
   }
   // delete the shaders as they're linked into our program now and no longer necessery
   glDeleteShader(vertShader);
   glDeleteShader(fragShader);
-// compile shaders done ///////////////////////////////////
-  
+  GLuint uniformBlockIndex = glGetUniformBlockIndex(*shaderID, "GlobalMatrices");
+  glUniformBlockBinding(*shaderID, uniformBlockIndex, 0);
+}
+
+void Renderer::initialize() {
+  //meshes.reserve(100);
+  level.reserve(100);
+  levelElements.reserve(100);
+
+  compileShader(&shaderID, vertexSourceUBUF, fragmentSource);
   GLuint vao;
   glGenVertexArrays(1, &vao);
-  glGenBuffers(1, &vbo);
-  glGenBuffers(1, &ebo);
   glBindVertexArray(vao);
-  
+
+  glGenBuffers(1, &vbo);
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
   glBufferData(GL_ARRAY_BUFFER, level.size()*sizeof(Vertpcnu), level.data(), GL_DYNAMIC_DRAW);
+  glGenBuffers(1, &ebo);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, levelElements.size()*sizeof(int), levelElements.data(), GL_DYNAMIC_DRAW);
+  glGenBuffers(1, &uniformBuffer);
+  glBindBuffer(GL_UNIFORM_BUFFER, uniformBuffer);
+  glBufferData(GL_UNIFORM_BUFFER, sizeof(m4x4) * 2 + sizeof(v3), NULL, GL_STREAM_DRAW);
+  glBindBufferRange(GL_UNIFORM_BUFFER, 0, uniformBuffer, 0, sizeof(m4x4) * 2 + sizeof(v3));
   
   GLint posAttrib = glGetAttribLocation(shaderID, "position");
   glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertpcnu), 0);
@@ -150,6 +211,7 @@ void Renderer::initialize() {
   glEnableVertexAttribArray(texCoord);
 
   #if DEBUG_BUILD
+    compileShader(&debugShaderID, vertexSource, debugFragmentSource);
     debugBoundingVerts.reserve(100);
     debugBoundingElements.reserve(100);
     renderDebug = false;
@@ -331,6 +393,7 @@ void Mesh::addCircle(v3 cirCenter, float rad, float numPts) {
 
 
 void Renderer::draw() {
+  glEnable(GL_FRAMEBUFFER_SRGB); 
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
   GLint posAttrib = glGetAttribLocation(shaderID, "position");
@@ -345,16 +408,20 @@ void Renderer::draw() {
   GLint texCoord = glGetAttribLocation(shaderID, "texCoordIn");
   glVertexAttribPointer(texCoord, 3, GL_FLOAT, GL_FALSE, sizeof(Vertpcnu), (void*)(sizeof(v3)*3));
   glEnableVertexAttribArray(texCoord);
-
   glDrawElements(GL_TRIANGLES, levelElements.size(), GL_UNSIGNED_INT, 0);
+
   #if DEBUG_BUILD
     if(renderDebug){
+      //glUseProgram(debugShaderID);
+      glEnable(GL_LINE_SMOOTH);
+      glLineWidth(50.0);
       glBindBuffer(GL_ARRAY_BUFFER, debugVbo);
       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, debugEbo);
       posAttrib = glGetAttribLocation(shaderID, "position");
       glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(v3), 0);
       glEnableVertexAttribArray(posAttrib);
       glDrawElements(GL_LINES, debugBoundingElements.size(), GL_UNSIGNED_INT, 0);
+      glLineWidth(1.0);
     }
   #endif
 }
@@ -409,6 +476,69 @@ void Renderer::addDebugVolume(const v3& center, const v3& rad) {
   debugBoundingElements.push_back(startingIndex+1);
   debugBoundingElements.push_back(startingIndex+6);
   debugBoundingElements.push_back(startingIndex+2);
+}
+
+void Renderer::addDebugVolume(v3& center, v3 axes[3], v3& halfW) {
+
+  v3 newVert, offset;
+  int startingIndex = debugBoundingVerts.size();
+  offset = halfW;
+
+  //front plane
+  //newVert = V3(center.x - offset.x, center.y + offset.y, center.z + offset.z);//0
+  newVert = center - halfW.x*axes[0] + halfW.y*axes[1] + halfW.z*axes[2];
+  debugBoundingVerts.push_back(newVert);
+  //newVert = V3(center.x - offset.x, center.y - offset.y, center.z + offset.z);//1
+  newVert = center - halfW.x*axes[0] - halfW.y*axes[1] + halfW.z*axes[2];
+  debugBoundingVerts.push_back(newVert);
+  //newVert = V3(center.x + offset.x, center.y - offset.y, center.z + offset.z);//2
+  newVert = center + halfW.x*axes[0] - halfW.y*axes[1] + halfW.z*axes[2];
+  debugBoundingVerts.push_back(newVert);
+  //newVert = V3(center.x + offset.x, center.y + offset.y, center.z + offset.z);//3
+  newVert = center + halfW.x*axes[0] + halfW.y*axes[1] + halfW.z*axes[2];
+  debugBoundingVerts.push_back(newVert);
+  
+  //back plane
+  //newVert = V3(center.x - offset.x, center.y + offset.y, center.z - offset.z);//4
+  newVert = center - halfW.x*axes[0] + halfW.y*axes[1] - halfW.z*axes[2];
+  debugBoundingVerts.push_back(newVert);
+  //newVert = V3(center.x - offset.x, center.y - offset.y, center.z - offset.z);//5
+  newVert = center - halfW.x*axes[0] - halfW.y*axes[1] - halfW.z*axes[2];
+  debugBoundingVerts.push_back(newVert);
+  //newVert = V3(center.x + offset.x, center.y - offset.y, center.z - offset.z);//6
+  newVert = center + halfW.x*axes[0] - halfW.y*axes[1] - halfW.z*axes[2];
+  debugBoundingVerts.push_back(newVert);
+  //newVert = V3(center.x + offset.x, center.y + offset.y, center.z - offset.z);//7
+  newVert = center + halfW.x*axes[0] + halfW.y*axes[1] - halfW.z*axes[2];
+  debugBoundingVerts.push_back(newVert);
+
+  debugBoundingElements.push_back(startingIndex);
+  debugBoundingElements.push_back(startingIndex+1);
+  debugBoundingElements.push_back(startingIndex+1);
+  debugBoundingElements.push_back(startingIndex+2);
+  debugBoundingElements.push_back(startingIndex+2);
+  debugBoundingElements.push_back(startingIndex+3);
+  debugBoundingElements.push_back(startingIndex+3);
+  debugBoundingElements.push_back(startingIndex+0);
+  //back
+  debugBoundingElements.push_back(startingIndex+4);
+  debugBoundingElements.push_back(startingIndex+5);
+  debugBoundingElements.push_back(startingIndex+5);
+  debugBoundingElements.push_back(startingIndex+6);
+  debugBoundingElements.push_back(startingIndex+6);
+  debugBoundingElements.push_back(startingIndex+7);
+  debugBoundingElements.push_back(startingIndex+7);
+  debugBoundingElements.push_back(startingIndex+4);
+  //top
+  debugBoundingElements.push_back(startingIndex+4);
+  debugBoundingElements.push_back(startingIndex);
+  debugBoundingElements.push_back(startingIndex+7);
+  debugBoundingElements.push_back(startingIndex+3);
+  //bottom
+  debugBoundingElements.push_back(startingIndex+5);
+  debugBoundingElements.push_back(startingIndex+1);
+  debugBoundingElements.push_back(startingIndex+6);
+  debugBoundingElements.push_back(startingIndex+2);  
 }
 
 GLuint loadTexture(Texture* texture, char* bmpPath) {
@@ -501,7 +631,7 @@ void Renderer::loadTextureArray512(int aID, char* aPath, int bID, char* bPath, i
     texTable[dID].glTextureNum = texID;
     texTable[dID].texLayer = 3;
   }
-  glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, 0, 512, 512, 4, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
+  glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, 0, 512, 512, 4, GL_BGRA_EXT, GL_UNSIGNED_BYTE, buffer);
   VirtualFree(buffer, 0, MEM_RELEASE);
 }
 
@@ -548,4 +678,12 @@ void Renderer::addTri(Vertpcnu& a, Vertpcnu& b, Vertpcnu& c) {
   levelElements.push_back(index++);
   level.push_back(c);
   levelElements.push_back(index++);
+}
+
+void Renderer::debugDrawLine(v3& start, v3& end) {
+  int startingIndex = debugBoundingVerts.size();
+  debugBoundingVerts.push_back(start);
+  debugBoundingVerts.push_back(end);
+  debugBoundingElements.push_back(startingIndex);
+  debugBoundingElements.push_back(startingIndex+1);
 }

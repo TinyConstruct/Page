@@ -40,6 +40,7 @@
 #define DEBUG_SOURCE_OTHER                        0x824B
 #define DEBUG_TYPE_ERROR                          0x824C
 #define DEBUG_TYPE_DEPRECATED_BEHAVIOR            0x824D
+#define GL_INVALID_INDEX                          0xFFFFFFFFu
 #define DEBUG_TYPE_UNDEFINED_BEHAVIOR             0x824E
 #define DEBUG_TYPE_PORTABILITY                    0x824F
 #define DEBUG_TYPE_PERFORMANCE                    0x8250
@@ -50,10 +51,12 @@
 #define WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB    0x0002
 #define GL_ARRAY_BUFFER                           0x8892
 #define GL_ELEMENT_ARRAY_BUFFER                   0x8893
+#define GL_UNIFORM_BUFFER                         0x8A11
 #define GL_FRAGMENT_SHADER                        0x8B30
 #define GL_VERTEX_SHADER                          0x8B31
 #define GL_COMPILE_STATUS                         0x8B81
 #define GL_LINK_STATUS                            0x8B82
+
 
 #define GL_TEXTURE_2D_ARRAY                       0x8C1A
 #define GL_MAX_ARRAY_TEXTURE_LAYERS               0x88FF
@@ -93,6 +96,7 @@
 #define GL_TEXTURE31                              0x84DF
 
 #define GL_CLAMP_TO_EDGE                          0x812F
+#define GL_FRAMEBUFFER_SRGB                       0x8DB9
 
 typedef ptrdiff_t GLsizeiptr;
 
@@ -106,9 +110,6 @@ struct opengl_info{
   int32_t EXT_texture_sRGB_decode;
   int32_t GL_ARB_framebuffer_sRGB;
 };
-
-
-
 
 //GL types
 typedef char GLchar;
@@ -155,6 +156,11 @@ typedef void WINAPI gl_buffer_sub_data  (GLenum target, GLintptr offset, GLsizei
 typedef void WINAPI gl_debug_message_callback_arb (void* callback, void * userParam);
 typedef void WINAPI gl_tex_storage_3d (GLenum target, GLsizei levels, GLenum internalformat, GLsizei width, GLsizei height, GLsizei depth);
 typedef void WINAPI gl_tex_sub_image_3d (GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLenum type, const void *pixels);
+typedef void WINAPI gl_bind_buffer_range (GLenum target, GLuint index, GLuint buffer, GLintptr offset, GLsizeiptr size);
+
+
+typedef void WINAPI gl_uniform_block_binding (GLuint program, GLuint uniformBlockIndex, GLuint uniformBlockBinding);
+typedef GLuint WINAPI gl_get_uniform_block_index (GLuint program, const GLchar *uniformBlockName);
 
 
 extern wgl_swap_interval_ext* wglSwapInterval;
@@ -194,6 +200,9 @@ extern gl_uniform_matrix4fv* glUniformMatrix4fv;
 extern gl_buffer_sub_data* glBufferSubData;
 extern gl_tex_storage_3d* glTexStorage3D;
 extern gl_tex_sub_image_3d* glTexSubImage3D;
+extern gl_uniform_block_binding* glUniformBlockBinding;
+extern gl_get_uniform_block_index* glGetUniformBlockIndex;
+extern gl_bind_buffer_range* glBindBufferRange;
 
 void win32InitOpenGL(HWND window);
 #endif //__ARO_OPENGL__

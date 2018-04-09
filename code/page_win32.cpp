@@ -237,9 +237,14 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
       levelGeo.initialize();
       levelData.bakeTestLevel();
 
-      for(int i = 0; i < levelGeo.boundingBoxes.size(); i++) {
-        renderer.addDebugVolume(levelGeo.boundingBoxes[i].center, levelGeo.boundingBoxes[i].rad);
+      for(int i = 0; i < levelGeo.AABBs.size(); i++) {
+        renderer.addDebugVolume(levelGeo.AABBs[i].center, levelGeo.AABBs[i].rad);
       }
+
+      for(int i = 0; i < levelGeo.OBBs.size(); i++) {
+        renderer.addDebugVolume(levelGeo.OBBs[i].c, levelGeo.OBBs[i].u, levelGeo.OBBs[i].width);
+      }
+
 
       renderer.initialize();
       keyboardState.initialize();
@@ -342,15 +347,15 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
           player.viewDir = viewDir;
           bool noCols = true;
 
-          //for(int i = 0; i < levelGeo.boundingBoxes.size(); i++) {
-          //  if(isColliding(playerBox, levelGeo.boundingBoxes[i])) {
-          //    noCols = false;
-          //    break;
-          //  }
-          //}
-          //if(noCols) {
+          for(int i = 0; i < levelGeo.AABBs.size(); i++) {
+            if(isColliding(playerBox, levelGeo.AABBs[i])) {
+              noCols = false;
+              break;
+            }
+          }
+          if(noCols) {
             player.center = playerBox.center;
-          //}
+          }
           if(player.center.y < .5) {
             player.center.y = .5;
             player.acc.y = 0.0;
@@ -361,10 +366,10 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
         else {
           //game is paused, draw pause screen/menu/whatever
         }
-
+        glUseProgram(renderer.shaderID);
         glClearColor(1.0,0.0,1.0,1.0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glUseProgram(renderer.shaderID);
+
 
         v3 cameraPosition = V3(player.center.x, player.center.y, player.center.z) + playerOffset;
         
@@ -375,25 +380,23 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
         sprintf_s(buffer, "Player view: x %f y %f z %f\n", viewDir.x, viewDir.y, viewDir.z);
         OutputDebugStringA(buffer);
 
-        m4x4 modelMat = identity();
-        GLint modelID = glGetUniformLocation(renderer.shaderID, "model");
-        glUniformMatrix4fv(modelID, 1, GL_FALSE, (float*)modelMat.n);
-        
+        //m4x4 modelMat = identity();
+        //GLint modelID = glGetUniformLocation(renderer.shaderID, "model");
+        //glUniformMatrix4fv(modelID, 1, GL_FALSE, (float*)modelMat.n);
+
+        m4x4 viewMat = aroLookat(cameraPosition, cameraPosition + player.viewDir);
+        //GLint viewID = glGetUniformLocation(renderer.shaderID, "view");
+        //glUniformMatrix4fv(viewID, 1, GL_FALSE, (float*) viewMat.n);
+        glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(m4x4), viewMat.n);
+
         m4x4 projMat; 
         aroPerspective(projMat, 45.0f, renderer.aspectRatio, 0.1f, 100.0f);
-        m4x4 viewMat = aroLookat(cameraPosition, cameraPosition + player.viewDir);
-
-        GLint viewID = glGetUniformLocation(renderer.shaderID, "view");
-        glUniformMatrix4fv(viewID, 1, GL_TRUE, (float*) viewMat.n);
-
-        GLint projID = glGetUniformLocation(renderer.shaderID, "projection");
-        glUniformMatrix4fv(projID, 1, GL_FALSE, (float*)projMat.n);
-
-        GLint lightID = glGetUniformLocation(renderer.shaderID, "lightPos");
-        glUniform3f(lightID, player.center.x, player.center.y, player.center.z);
+        //GLint projID = glGetUniformLocation(renderer.shaderID, "projection");
+        //glUniformMatrix4fv(projID, 1, GL_FALSE, (float*)projMat.n);
+        glBufferSubData(GL_UNIFORM_BUFFER, sizeof(m4x4), sizeof(m4x4), projMat.n);
 
         GLint playerPosID = glGetUniformLocation(renderer.shaderID, "playerPos");
-        glUniform3f(playerPosID, player.center.x, player.center.y, player.center.z);
+        glBufferSubData(GL_UNIFORM_BUFFER, sizeof(m4x4)*2, sizeof(v3), &player.center);
 
         renderer.draw();
         glFinish();

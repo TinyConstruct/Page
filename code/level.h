@@ -1,15 +1,26 @@
 #ifndef __LEVEL__
 #define __LEVEL__
+#include "aro_math.h"
 
 struct AABB {
   v3 center;
   v3 rad;
 };
 
+struct OBB {
+  v3 c;
+  v3 u[3]; //local axes
+  v3 width; //halfwidth extants along OBB axes
+};
+
 class LevelGeometry {
 public:
-  std::vector<AABB> boundingBoxes;
-  void addAABB(v3 center, v3 rad);
+  std::vector<AABB> AABBs;
+  std::vector<OBB> OBBs;
+  
+  void addAABB(v3& center, v3& rad);
+  void addOOB(v3& center, v3 axes[3], v3& halfW);
+  int TestOBBOBB(OBB& a, OBB& b);
   void initialize();
 };
 
@@ -35,7 +46,7 @@ private:
 public: 
   void initialize(LevelGeometry* g, Renderer* r);
   void addTexturedQuad(v3& vert1, v3& vert2, v3& vert3, v3& vert4, int texID);
-  void addTexturedQuad(v3 vert1, v3 vert2, v3 vert3, v3 vert4, v3 color, LevelGeometry* level);
+  void addTexturedQuad(v3& vert1, v3& vert2, v3& vert3, v3& vert4, int texID, LevelGeometry* level);
   void bakeTestLevel();
   void finalizeQuads();
 };

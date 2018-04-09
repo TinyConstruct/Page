@@ -2,7 +2,7 @@
 #define __RENDERING__
 
 #include "bitmap.h"
-
+#include "aro_math.h"
 enum {LEVEL_BUFFER};
 enum {FLOOR1=0,FLOOR2, FLOOR3, WALL1, WALL2, CEIL1, MAX_TEX};
 
@@ -54,7 +54,7 @@ public:
 class Renderer {
 public:
   TextureHandle texTable[MAX_TEX];
-  GLuint vbo, ebo;
+  GLuint vbo, ebo, uniformBuffer;
   GLuint shaderID;
   float aspectRatio;
   //std::vector<Mesh*> meshes;
@@ -62,7 +62,7 @@ public:
   std::vector<int> levelElements;
   #if DEBUG_BUILD
   bool renderDebug;
-  GLuint debugVbo, debugEbo;
+  GLuint debugVbo, debugEbo, debugShaderID;
   std::vector<v3> debugBoundingVerts;
   std::vector<int> debugBoundingElements;
   #endif
@@ -76,6 +76,8 @@ public:
   void textureArrayTest();
   TextureHandle getGLTexID(int texID);
   void addTri(Vertpcnu& a, Vertpcnu& b, Vertpcnu& c);
+  void addDebugVolume(v3& center, v3 axes[3], v3& halfW);
+  void debugDrawLine(v3& start, v3& end);
 };
 
 GLuint loadTexture(Texture* texture, char* bmpPath);

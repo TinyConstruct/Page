@@ -284,6 +284,24 @@ v3 operator-(p3 a, p3 b) {
 }
 
 
+////////////// Matrix 3x3 ////////////////////////////////
+m4x4 M3x3(float n00,float n01,float n02, 
+          float n10, float n11,float n12,
+          float n20, float n21,float n22) {
+  m4x4 r;
+  r.n[0][0]=n00;r.n[0][1]=n01;r.n[0][2]=n02;
+  r.n[1][0]=n10;r.n[1][1]=n11;r.n[1][2]=n12;
+  r.n[2][0]=n20;r.n[2][1]=n21;r.n[2][2]=n22;
+  return r;
+}
+
+v3 operator*(m3x3& m, v3 v) {
+  v3 result = { m.n[0][0] * v.x + m.n[0][1] * v.y + m.n[0][2],
+                m.n[1][0] * v.x + m.n[1][1] * v.y + m.n[1][2],
+                m.n[2][0] * v.x + m.n[2][1] * v.y + m.n[2][2] };
+  return result;
+}
+
 ////////////// Matrix 4x4 ////////////////////////////////
 //TODO: think about reference passing cost and SIMD? 
 
@@ -607,7 +625,7 @@ m4x4 aroLookatb(v3* eyePosition, v3* viewCenter) {
   return (M*translate(p));
 }
 
-m4x4 aroLookat(v3 &eyePosition, v3 &viewCenter)
+m4x4 aroLookatRowMajor(v3 &eyePosition, v3 &viewCenter)
 {
   m4x4 result;
   v3 forward = normalize(viewCenter - eyePosition);
@@ -629,6 +647,32 @@ m4x4 aroLookat(v3 &eyePosition, v3 &viewCenter)
   result.n[3][0] = 0.0f;
   result.n[3][1] = 0.0f;
   result.n[3][2] = 0.0f;
+  result.n[3][3] = 1.0f;
+  return result;
+}
+
+m4x4 aroLookat(v3 &eyePosition, v3 &viewCenter)
+{
+  m4x4 result;
+  v3 forward = normalize(viewCenter - eyePosition);
+  v3 right = normalize(cross(forward, V3(0.0,1.0,0.0)));
+  v3 up = normalize(cross(right, forward));
+
+  result.n[0][0] = right.x;
+  result.n[0][1] = up.x;
+  result.n[0][2] = -forward.x;
+  result.n[0][3] = 0.0f;
+  result.n[1][0] = right.y;
+  result.n[1][1] = up.y;
+  result.n[1][2] = -forward.y;
+  result.n[1][3] = 0.0f;
+  result.n[2][0] = right.z;
+  result.n[2][1] = up.z;
+  result.n[2][2] = -forward.z;
+  result.n[2][3] = 0.0f;
+  result.n[3][0] = -dot(right,eyePosition);
+  result.n[3][1] = -dot(up,eyePosition);
+  result.n[3][2] = dot(forward,eyePosition);  
   result.n[3][3] = 1.0f;
   return result;
 }

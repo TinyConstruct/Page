@@ -1,6 +1,6 @@
 #ifndef __GAMESTATE__
 #define __GAMESTATE__
-
+#include "aro_math.h"
 class Player {
   public:
   v3 center;
