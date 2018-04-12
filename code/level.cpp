@@ -1,9 +1,12 @@
 #include <vector>
 #include <Windows.h>
 #include <gl/gl.h>
+#include <cstring>
 #include "aro_math.h"
 #include "texture.h"
 #include "rendering.h"
+#include "aro_generic.h"
+#include "aro_platform_win32.h"
 
 #include "level.h"
 void LevelGeometry::addAABB(v3& center, v3& rad) {
@@ -44,6 +47,9 @@ void LevelData::addTexturedQuad(v3& vert1, v3& vert2, v3& vert3, v3& vert4, int 
   q.texHandle = renderer->getGLTexID(texID);
   quads->push_back(q);
 }
+void LevelData::addTexturedQuad(TexturedQuad& q) {
+  quads->push_back(q);
+}
 
 void LevelData::addTexturedQuad(v3& vert1, v3& vert2, v3& vert3, v3& vert4, int texID, LevelGeometry* level) {
   TexturedQuad q;
@@ -74,14 +80,15 @@ void LevelData::finalizeQuads() {
   for(int i = 0; i < quads->size(); i++){
   //add rendering information: 
     Vertpcnu a, b, c, d;
+    v2 uvScale = (*quads)[i].texScale;
     a.position = (*quads)[i].a;
-    a.uv = V3(0.0, 1.0, (*quads)[i].texHandle.texLayer);
+    a.uv = V3(0.0, 1.0*uvScale.y, (*quads)[i].texHandle.texLayer);
     b.position = (*quads)[i].b;
     b.uv = V3(0.0, 0.0, (*quads)[i].texHandle.texLayer);
     c.position = (*quads)[i].c;
-    c.uv = V3(1.0, 0.0, (*quads)[i].texHandle.texLayer);
+    c.uv = V3(1.0*uvScale.x, 0.0, (*quads)[i].texHandle.texLayer);
     d.position = (*quads)[i].d;
-    d.uv = V3(1.0, 1.0, (*quads)[i].texHandle.texLayer);
+    d.uv = V3(1.0*uvScale.x, 1.0*uvScale.y, (*quads)[i].texHandle.texLayer);
     renderer->addTri(a,b,c);
     renderer->addTri(c, d, a);
     v3 center = .5*(a.position - c.position) + c.position;
@@ -96,13 +103,13 @@ void LevelData::finalizeQuads() {
           (c.position.z == d.position.z)) ){
       if(a.position.y == b.position.y) {//floor or ceiling
         rad.x = magnitude(a.position - b.position)/2.0;
-        rad.y = 0.2;
+        rad.y = 0.01;
         rad.z = magnitude(b.position - c.position)/2.0;
       }
       else {
-        rad.x = max(0.2, 1.05*(abs(b.position.x - c.position.x)/2.0));
+        rad.x = max(0.01, 1.05*(abs(b.position.x - c.position.x)/2.0));
         rad.y = 1.05*(abs(b.position.y - a.position.y) / 2.0);
-        rad.z = max(0.2, (abs(b.position.z - a.position.z)/2.0));
+        rad.z = max(0.01, (abs(b.position.z - a.position.z)/2.0));
       }
       geo->addAABB(center, rad);
     }
@@ -124,7 +131,7 @@ void LevelData::finalizeQuads() {
 
       rad.x = magnitude(dir1)*1.1/2.0;
       rad.y = magnitude(dir2)*1.1/2.0;
-      rad.z = 0.1;
+      rad.z = 0.01;
 
       geo->addOOB(center, axes, rad);
     }
@@ -133,15 +140,158 @@ void LevelData::finalizeQuads() {
 
 void LevelData::bakeTestLevel() {
   //add a bunch of geometry to a buffer: (quad,TEX_NUM)...
-  addTexturedQuad(V3(-20.0, 0.0, -20.0), V3(-20.0, 0.0, 20.0), V3(20.0, 0.0, 20.0), V3(20.0, 0.0, -20.0),  FLOOR1);
-  addTexturedQuad(V3(-20.0, 6.0, -20.0), V3(20.0, 6.0, -20.0), V3(20.0, 6.0, 20.0), V3(-20.0, 6.0, 20.0),  CEIL1);
-  addTexturedQuad(V3(-1.5, 3.0, -5.0), V3(-1.5, 0.0, -5.0), V3(1.5, 0.0, -5.0), V3(1.5, 3.0, -5.0),  WALL2);
-  addTexturedQuad(V3(-3.5, 3.0, -3.0), V3(-3.5, 3.0, 0.0), V3(0.0, 1.0, 0.0), V3(0.0, 1.0, -3.0),  WALL2);
+  
+  //addTexturedQuad(V3(-20.0, 0.0, -20.0), V3(-20.0, 0.0, 20.0), V3(20.0, 0.0, 20.0), V3(20.0, 0.0, -20.0),  FLOOR1);
+  //addTexturedQuad(V3(-20.0, 6.0, -20.0), V3(20.0, 6.0, -20.0), V3(20.0, 6.0, 20.0), V3(-20.0, 6.0, 20.0),  CEIL1);
+  //addTexturedQuad(V3(-1.5, 3.0, -5.0), V3(-1.5, 0.0, -5.0), V3(1.5, 0.0, -5.0), V3(1.5, 3.0, -5.0),  WALL2);
+  //addTexturedQuad(V3(-3.5, 3.0, -3.0), V3(-3.5, 3.0, 0.0), V3(0.0, 1.0, 0.0), V3(0.0, 1.0, -3.0),  WALL2);
+  loadLevelFromTextFile("data/dungeon1.dat");
   //other buffer: (tri, TEX_NUM)
   //sort on getGLTexID(TEX_NUM) for both buffers
   //send quads/tris to renderer
   finalizeQuads();
   //send quads/tris to LevelGeometry for bounding boxes
+}
+
+void LevelData::preLoadTextureArray512(int numTexes, char* tex1, char* tex2, char* tex3, char* tex4) {
+  int id1, id2, id3, id4;
+  char *p1, *p2, *p3, *p4;
+  char path1[255] = "data/";
+  char path2[255] = "data/";
+  char path3[255] = "data/";
+  char path4[255] = "data/";
+  id1 = texStrToID(tex1);
+  strcat_s(path1, tex1);
+  p1 = path1;
+  if(numTexes > 1) {
+    id2 = texStrToID(tex2);
+    strcat_s(path2, tex2);
+    p2 = path2;
+  }
+  else {
+    p2 = NULL;
+  }
+  if(numTexes > 2) {
+    id3 = texStrToID(tex3);
+    strcat_s(path3, tex3);
+    p3 = path3;
+  }
+  else {
+    p3 = NULL;
+  }
+  if(numTexes > 3) {
+    id4 = texStrToID(tex4);
+    strcat_s(path4, tex4);
+    p4 = path4;
+  }
+  else {
+    p4 = NULL;
+  }
+  renderer->loadTextureArray512(id1, p1, id2, p2, id3, p3, id4, p4);
+}
+char* LevelData::processQuadTripple(char* str, v3* v) {
+  char buffer[255];
+  char* readPtr = str;
+  char* writePtr = buffer;
+  while(*readPtr != ','){
+    *writePtr++ = *readPtr++;
+  }
+  readPtr++;
+  *writePtr = '\0';
+  writePtr = buffer;
+  v->x = atof(buffer);
+  while(*readPtr != ','){
+    *writePtr++ = *readPtr++;
+  }
+  readPtr++;
+  *writePtr = '\0';
+  writePtr = buffer;
+  v->y = atof(buffer);
+  while(*readPtr != ')'){
+    *writePtr++ = *readPtr++;
+  }
+  readPtr++;
+  *writePtr = '\0';
+  v->z = atof(buffer);
+  return readPtr;
+}
+
+char* LevelData::processUV2(char* str, v2* v) {
+  char buffer[255];
+  char* readPtr = str;
+  char* writePtr = buffer;
+  while(*readPtr != ','){
+    *writePtr++ = *readPtr++;
+  }
+  readPtr++;
+  *writePtr = '\0';
+  writePtr = buffer;
+  v->x = atof(buffer);
+  while(*readPtr != ')'){
+    *writePtr++ = *readPtr++;
+  }
+  *writePtr = '\0';
+  v->y = atof(buffer);
+  return readPtr;
+}
+
+char* LevelData::processQuadTextLine(char* str, TexturedQuad* q) {
+  v3 tempVec;
+  v2 tempUV;
+  char buffer[255];
+  char* readPtr = str;
+  char* writePtr = buffer;
+  
+  readPtr = advancePointerToOnePastChar(readPtr, '(');
+  readPtr = processQuadTripple(readPtr, &q->b);
+  readPtr = advancePointerToOnePastChar(readPtr, '(');
+  readPtr = processQuadTripple(readPtr, &q->d);
+  readPtr = advancePointerToOnePastChar(readPtr, '(');
+  readPtr = processQuadTripple(readPtr, &q->c);
+  readPtr = advancePointerToOnePastChar(readPtr, '(');
+  readPtr = processQuadTripple(readPtr, &q->a);
+  readPtr = advancePointerToOnePastChar(readPtr, '(');
+  readPtr = processUV2(readPtr, &q->texScale);
+  return readPtr;
+}
+
+void LevelData::loadLevelFromTextFile(char* path) {
+  //First important line of file must start with "**"
+  char texes[4][255];
+  int texNum = -1;
+  char* writePtr;
+  FileReadResult r = readWholeFile(path);
+  char* fileText = (char*) r.contents;
+  char* readPtr = fileText;
+  char* eof = readPtr + r.contentsSize;
+  std::vector<TexturedQuad>* qs = new std::vector<TexturedQuad>;
+  while(readPtr != eof) {
+    if(*readPtr=='*' && *(readPtr + 1)=='*'){
+      texNum++;
+      if(texNum > 3) {
+        //load textures
+      }
+      readPtr+=3;
+      writePtr = &texes[texNum][0];
+      while(*readPtr != '\n' && *readPtr != '\r') {
+        *writePtr++ = *readPtr++;
+      }
+      *writePtr = '\0';
+    }
+    else if(*readPtr == '(') {
+      TexturedQuad q;
+       readPtr = processQuadTextLine(readPtr, &q);
+       q.texHandle.texLayer = texNum;
+       qs->push_back(q);
+    }
+    readPtr++;
+  }
+  //load textures
+  preLoadTextureArray512(texNum + 1, texes[0], texes[1], texes[2], texes[3]);
+  for(int i = 0; i < qs->size(); i++) {
+    TexturedQuad q = (*qs)[i];
+    addTexturedQuad(q);
+  }
 }
 
 int LevelGeometry::TestOBBOBB(OBB& a, OBB& b) {

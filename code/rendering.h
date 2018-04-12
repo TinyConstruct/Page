@@ -4,7 +4,7 @@
 #include "bitmap.h"
 #include "aro_math.h"
 enum {LEVEL_BUFFER};
-enum {FLOOR1=0,FLOOR2, FLOOR3, WALL1, WALL2, CEIL1, MAX_TEX};
+enum {FLOOR1=0,FLOOR2, FLOOR3, WALL1, WALL2, CEIL1, CITY2_2, CITY3_2, CITY4_1, METALBOX, MAX_TEX};
 
 struct Vertpcnu {
   v3 position;
@@ -81,5 +81,6 @@ public:
 };
 
 GLuint loadTexture(Texture* texture, char* bmpPath);
+int texStrToID(char* str);
 
 #endif //__RENDERING__

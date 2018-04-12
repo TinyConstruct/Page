@@ -21,10 +21,10 @@ void KeyboardState::initialize() {
 
 void Player::initialize() {
   center.x = 0.0f;
-  center.y = 1.70f;
-  center.z = 3.0f;
+  center.y = 0.5f;
+  center.z = -0.5;
   onGround = true; 
-  yRotation = -90.0f;
+  yRotation = 0.0f;
   pitch = 0.0f;
   joggingSpeed = 2.6;
   walkingSpeed = 1.3;

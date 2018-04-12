@@ -230,8 +230,10 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
       float spriteFlipCounter = 0.0f;
 
       //load assets
-      renderer.loadTextureArray512(FLOOR1, "data/floor1.bmp", FLOOR2, "data/floor2.bmp", 
-        WALL2, "data/wall2.bmp", CEIL1, "data/ceil1.bmp");
+      
+      //renderer.loadTextureArray512(FLOOR1, "data/floor1.bmp", FLOOR2, "data/floor2.bmp", 
+      //  WALL2, "data/wall2.bmp", CEIL1, "data/ceil1.bmp");
+      
       //load level geometry/data
       levelData.initialize(&levelGeo, &renderer);
       levelGeo.initialize();
@@ -258,7 +260,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
       player.vel = V3(0.0,0.0,0.0);
       player.acc = V3(0.0,0.0,0.0);
       float mouseLookDampen = .5;
-      v3 playerOffset = V3(0.0,1.75,0.0);
+      v3 playerOffset = V3(0.0,0.0,0.0);
 
       //createTextureArrayBuffer(10,10);
 //// Main Game Loop ////////
@@ -390,7 +392,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
         glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(m4x4), viewMat.n);
 
         m4x4 projMat; 
-        aroPerspective(projMat, 45.0f, renderer.aspectRatio, 0.1f, 100.0f);
+        aroPerspective(projMat, 60.0f, renderer.aspectRatio, 0.1f, 1000.0f);
         //GLint projID = glGetUniformLocation(renderer.shaderID, "projection");
         //glUniformMatrix4fv(projID, 1, GL_FALSE, (float*)projMat.n);
         glBufferSubData(GL_UNIFORM_BUFFER, sizeof(m4x4), sizeof(m4x4), projMat.n);

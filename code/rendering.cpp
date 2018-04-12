@@ -128,6 +128,42 @@ void main()
 }
 )FOO";
 
+int texStrToID(char* str) {
+  if(strcmpAny(str, "ceil1.bmp")) {
+    return CEIL1;
+  }
+  else if(strcmpAny(str, "city2_2.bmp")) {
+    return CITY2_2;
+  }
+  else if(strcmpAny(str, "city3_2.bmp")) {
+    return CITY3_2;
+  }
+  else if(strcmpAny(str, "city4_1.bmp")) {
+    return CITY4_1;
+  }
+  else if(strcmpAny(str, "floor1.bmp")) {
+    return FLOOR1;
+  }
+  else if(strcmpAny(str, "floor2.bmp")) {
+    return FLOOR2;
+  }
+  else if(strcmpAny(str, "floor3.bmp")) {
+    return FLOOR3;
+  }
+  else if(strcmpAny(str, "metalbox.bmp")) {
+    return METALBOX;
+  }
+  else if(strcmpAny(str, "wall1.bmp")) {
+    return WALL1;
+  }
+  else if(strcmpAny(str, "wall2.bmp")) {
+    return WALL2;
+  }
+  else {
+    InvalidCodePath;
+  }
+}
+
 void compileShader(GLuint* shaderID, const char* vSrc, const char* fSrc) {
   GLuint vertShader, fragShader;
   int success;
@@ -393,7 +429,7 @@ void Mesh::addCircle(v3 cirCenter, float rad, float numPts) {
 
 
 void Renderer::draw() {
-  glEnable(GL_FRAMEBUFFER_SRGB); 
+  //glEnable(GL_FRAMEBUFFER_SRGB); 
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
   GLint posAttrib = glGetAttribLocation(shaderID, "position");
@@ -586,6 +622,8 @@ GLuint Renderer::createTextureArrayBuffer(int width, int height) {
   glGenTextures(1, &texID);
   glBindTexture(GL_TEXTURE_2D_ARRAY, texID);
   glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_RGBA8, width, height, layerCount);
+  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
   glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   return texID;
@@ -633,29 +671,6 @@ void Renderer::loadTextureArray512(int aID, char* aPath, int bID, char* bPath, i
   }
   glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, 0, 512, 512, 4, GL_BGRA_EXT, GL_UNSIGNED_BYTE, buffer);
   VirtualFree(buffer, 0, MEM_RELEASE);
-}
-
-void Renderer::textureArrayTest(){
-  GLuint texID = 0;
-  GLubyte buffer[32] = {
-     // Texels for first image.
-     0,   0,   0,   255,
-     255, 0,   0,   255,
-     0,   255, 0,   255,
-     0,   0,   255, 255,
-     // Texels for second image.
-     255, 255, 255, 255,
-     255, 255,   0, 255,
-     0,   255, 255, 255,
-     255, 0,   255, 255,
-  };
-  glGenTextures(1, &texID);
-  glBindTexture(GL_TEXTURE_2D_ARRAY, texID);
-  glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_RGBA8, 2, 2, 2);
-  glTexSubImage3D(GL_TEXTURE_2D_ARRAY, texID, 0, 0, 0, 2, 2, 2, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
-
-  glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
 }
 
 TextureHandle Renderer::getGLTexID(int texID) {

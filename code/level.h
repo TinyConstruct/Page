@@ -31,6 +31,7 @@ struct Tri {
 struct TexturedQuad {
   v3 a, b, c, d;
   TextureHandle texHandle;
+  v2 texScale;
 };
 
 // TODO: our levels will be loaded into memory, sorted by geometry/textures, then sent to the 
@@ -47,8 +48,15 @@ public:
   void initialize(LevelGeometry* g, Renderer* r);
   void addTexturedQuad(v3& vert1, v3& vert2, v3& vert3, v3& vert4, int texID);
   void addTexturedQuad(v3& vert1, v3& vert2, v3& vert3, v3& vert4, int texID, LevelGeometry* level);
+  void addTexturedQuad(TexturedQuad& q);
   void bakeTestLevel();
   void finalizeQuads();
+  void loadLevelFromTextFile(char* path);
+  void preLoadTextureArray512(int numTexes, char* tex1, char* tex2, char* tex3, char* tex4);
+  TexturedQuad processQuadTextLine(char* str);
+  char* processQuadTextLine(char* str, TexturedQuad* q);
+  char* processQuadTripple(char* str, v3* v);
+  char* processUV2(char* str, v2* v);
 };
 
 #endif

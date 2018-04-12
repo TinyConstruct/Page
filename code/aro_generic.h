@@ -2,6 +2,7 @@
 #define __ARO_GENERIC__
 
 #include <stdint.h>
+#include <stdio.h>
 
 #define ASSERTIONS_ENABLED 1
 const int DEBUG_BUILD = 1;
@@ -22,5 +23,7 @@ const int DEBUG_BUILD = 1;
 
 void reportAssertionFailure(char* expr, char* file, int line);
 unsigned int safeTruncateUInt64(uint64_t value);
+int strcmpAny(char const *s1, char const *s2);
+char* advancePointerToOnePastChar(char* str, char ch);
 
 #endif /* __ARO_GENERIC__ */
