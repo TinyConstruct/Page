@@ -161,6 +161,7 @@ int texStrToID(char* str) {
   }
   else {
     InvalidCodePath;
+    return 0;
   }
 }
 

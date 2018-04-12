@@ -77,21 +77,21 @@ void LevelData::addTexturedQuad(v3& vert1, v3& vert2, v3& vert3, v3& vert4, int 
 }
 
 void LevelData::finalizeQuads() {
-  for(int i = 0; i < quads->size(); i++){
+  for(size_t i = 0; i < quads->size(); i++){
   //add rendering information: 
     Vertpcnu a, b, c, d;
     v2 uvScale = (*quads)[i].texScale;
     a.position = (*quads)[i].a;
-    a.uv = V3(0.0, 1.0*uvScale.y, (*quads)[i].texHandle.texLayer);
+    a.uv = V3(0.0f, 1.0f * uvScale.y, (float) (*quads)[i].texHandle.texLayer);
     b.position = (*quads)[i].b;
-    b.uv = V3(0.0, 0.0, (*quads)[i].texHandle.texLayer);
+    b.uv = V3(0.0f, 0.0f, (float)(*quads)[i].texHandle.texLayer);
     c.position = (*quads)[i].c;
-    c.uv = V3(1.0*uvScale.x, 0.0, (*quads)[i].texHandle.texLayer);
+    c.uv = V3(1.0f*uvScale.x, 0.0f, (float)(*quads)[i].texHandle.texLayer);
     d.position = (*quads)[i].d;
-    d.uv = V3(1.0*uvScale.x, 1.0*uvScale.y, (*quads)[i].texHandle.texLayer);
+    d.uv = V3(1.0f*uvScale.x, 1.0f*uvScale.y, (float)(*quads)[i].texHandle.texLayer);
     renderer->addTri(a,b,c);
     renderer->addTri(c, d, a);
-    v3 center = .5*(a.position - c.position) + c.position;
+    v3 center = .5f*(a.position - c.position) + c.position;
     v3 rad;
   //add collision geometry:
     //test if axis aligned
@@ -102,14 +102,14 @@ void LevelData::finalizeQuads() {
         ((a.position.z == b.position.z) && (b.position.z == c.position.z) &&
           (c.position.z == d.position.z)) ){
       if(a.position.y == b.position.y) {//floor or ceiling
-        rad.x = magnitude(a.position - b.position)/2.0;
-        rad.y = 0.01;
-        rad.z = magnitude(b.position - c.position)/2.0;
+        rad.x = magnitude(a.position - b.position)/2.0f;
+        rad.y = 0.01f;
+        rad.z = magnitude(b.position - c.position)/2.0f;
       }
       else {
-        rad.x = max(0.01, 1.05*(abs(b.position.x - c.position.x)/2.0));
-        rad.y = 1.05*(abs(b.position.y - a.position.y) / 2.0);
-        rad.z = max(0.01, (abs(b.position.z - a.position.z)/2.0));
+        rad.x = max(0.01f, 1.05f*(abs(b.position.x - c.position.x)/2.0f));
+        rad.y = 1.05f*(abs(b.position.y - a.position.y) / 2.0f);
+        rad.z = max(0.01f, (abs(b.position.z - a.position.z)/2.0f));
       }
       geo->addAABB(center, rad);
     }
@@ -129,9 +129,9 @@ void LevelData::finalizeQuads() {
       renderer->debugDrawLine(center, center + 20*rad.y*axes[1]);
       renderer->debugDrawLine(center, center + 20*rad.z*axes[2]);
 
-      rad.x = magnitude(dir1)*1.1/2.0;
-      rad.y = magnitude(dir2)*1.1/2.0;
-      rad.z = 0.01;
+      rad.x = magnitude(dir1)*1.1f/2.0f;
+      rad.y = magnitude(dir2)*1.1f/2.0f;
+      rad.z = 0.01f;
 
       geo->addOOB(center, axes, rad);
     }
@@ -199,20 +199,20 @@ char* LevelData::processQuadTripple(char* str, v3* v) {
   readPtr++;
   *writePtr = '\0';
   writePtr = buffer;
-  v->x = atof(buffer);
+  v->x = (float) atof(buffer);
   while(*readPtr != ','){
     *writePtr++ = *readPtr++;
   }
   readPtr++;
   *writePtr = '\0';
   writePtr = buffer;
-  v->y = atof(buffer);
+  v->y = (float) atof(buffer);
   while(*readPtr != ')'){
     *writePtr++ = *readPtr++;
   }
   readPtr++;
   *writePtr = '\0';
-  v->z = atof(buffer);
+  v->z = (float) atof(buffer);
   return readPtr;
 }
 
@@ -226,18 +226,16 @@ char* LevelData::processUV2(char* str, v2* v) {
   readPtr++;
   *writePtr = '\0';
   writePtr = buffer;
-  v->x = atof(buffer);
+  v->x = (float) atof(buffer);
   while(*readPtr != ')'){
     *writePtr++ = *readPtr++;
   }
   *writePtr = '\0';
-  v->y = atof(buffer);
+  v->y = (float) atof(buffer);
   return readPtr;
 }
 
 char* LevelData::processQuadTextLine(char* str, TexturedQuad* q) {
-  v3 tempVec;
-  v2 tempUV;
   char buffer[255];
   char* readPtr = str;
   char* writePtr = buffer;
@@ -288,7 +286,7 @@ void LevelData::loadLevelFromTextFile(char* path) {
   }
   //load textures
   preLoadTextureArray512(texNum + 1, texes[0], texes[1], texes[2], texes[3]);
-  for(int i = 0; i < qs->size(); i++) {
+  for(size_t i = 0; i < qs->size(); i++) {
     TexturedQuad q = (*qs)[i];
     addTexturedQuad(q);
   }
@@ -296,7 +294,7 @@ void LevelData::loadLevelFromTextFile(char* path) {
 
 int LevelGeometry::TestOBBOBB(OBB& a, OBB& b) {
   float ra, rb;
-  float EPSILON = .001;
+  float EPSILON = .001f;
   m3x3 R, AbsR;
   // Compute rotation matrix expressing b in a’s coordinate frame
   for (int i = 0; i < 3; i++)

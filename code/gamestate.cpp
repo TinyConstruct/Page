@@ -22,13 +22,13 @@ void KeyboardState::initialize() {
 void Player::initialize() {
   center.x = 0.0f;
   center.y = 0.5f;
-  center.z = -0.5;
+  center.z = -0.5f;
   onGround = true; 
   yRotation = 0.0f;
   pitch = 0.0f;
-  joggingSpeed = 2.6;
-  walkingSpeed = 1.3;
-  sprintSpeed = 7.10;
+  joggingSpeed = 2.6f;
+  walkingSpeed = 1.3f;
+  sprintSpeed = 7.10f;
 }
 
 

@@ -177,7 +177,7 @@ win32MainWindowCallback(HWND window, UINT message, WPARAM WParam, LPARAM LParam)
 
 int CALLBACK
 WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showCode) {
-  srand(time(NULL));
+  srand((unsigned int)time(NULL));
   WNDCLASS windowClass = {};
   windowClass.style = CS_HREDRAW|CS_VREDRAW|CS_OWNDC;
   windowClass.lpfnWndProc = win32MainWindowCallback;
@@ -239,11 +239,11 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
       levelGeo.initialize();
       levelData.bakeTestLevel();
 
-      for(int i = 0; i < levelGeo.AABBs.size(); i++) {
+      for(size_t i = 0; i < levelGeo.AABBs.size(); i++) {
         renderer.addDebugVolume(levelGeo.AABBs[i].center, levelGeo.AABBs[i].rad);
       }
 
-      for(int i = 0; i < levelGeo.OBBs.size(); i++) {
+      for (size_t i = 0; i < levelGeo.OBBs.size(); i++) {
         renderer.addDebugVolume(levelGeo.OBBs[i].c, levelGeo.OBBs[i].u, levelGeo.OBBs[i].width);
       }
 
@@ -256,7 +256,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
       float time = 0;
       renderer.aspectRatio = (float)globalWindowDimensions.width / (float) globalWindowDimensions.height;
 
-      v3 gravity = V3(0.0, -9.86, 0.0);
+      v3 gravity = V3(0.0, -9.86f, 0.0);
       player.vel = V3(0.0,0.0,0.0);
       player.acc = V3(0.0,0.0,0.0);
       float mouseLookDampen = .5;
@@ -269,9 +269,9 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
         //update timer
         LARGE_INTEGER beginCounter;
         QueryPerformanceCounter(&beginCounter);
-        float dif = beginCounter.QuadPart - lastCounter.QuadPart;
-        float lastFrameMS = (1000 * dif) / (float)counterFreq.QuadPart;
-        float lastFrameSec = dif/counterFreq.QuadPart;
+        LONGLONG dif = (beginCounter.QuadPart - lastCounter.QuadPart);
+        float lastFrameMS = (float) (1000 * dif) / (float)counterFreq.QuadPart;
+        float lastFrameSec = (float)dif / (float) counterFreq.QuadPart;
         float fps = (float) counterFreq.QuadPart / (float)dif;
         lastCounter.QuadPart = beginCounter.QuadPart;
 
@@ -330,7 +330,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
             movementDir = movementDir - side;
           }
           if (keyboardState.jump && player.onGround) {
-            player.vel.y = sqrt(-.6*gravity.y); // vf*vf = -g*.6
+            player.vel.y = sqrt(-.6f*gravity.y); // vf*vf = -g*.6
             player.onGround = false;
           }
           if (keyboardState.duck) {
@@ -349,7 +349,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
           player.viewDir = viewDir;
           bool noCols = true;
 
-          for(int i = 0; i < levelGeo.AABBs.size(); i++) {
+          for(size_t i = 0; i < levelGeo.AABBs.size(); i++) {
             if(isColliding(playerBox, levelGeo.AABBs[i])) {
               noCols = false;
               break;

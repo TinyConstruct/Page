@@ -60,7 +60,7 @@ Bitmap loadBMP(char* fileName) {
 }
 
 bool freeBMP(Bitmap* bitmap) {
-  return VirtualFree(bitmap->contents, 0, MEM_RELEASE);
+  return VirtualFree(bitmap->contents, 0, MEM_RELEASE)!=0;
 }
 
 Win32WindowDimensions win32GetWindowDimension(HWND window) {
