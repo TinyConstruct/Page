@@ -370,3 +370,88 @@ int isColliding(AABB& a, AABB& b) {
   if (abs(a.center.z - b.center.z) > (a.rad.z + b.rad.z)) return 0;
   return 1;
 }
+
+void LevelGeometry::movePlayer(Player& player, KeyboardState& keyboardState, float pitchDif, float yRotationDif, float lastFrameSec) {
+  player.pitch += pitchDif;
+    player.yRotation += yRotationDif;
+    if(player.pitch > 89){ 
+      player.pitch = 89;
+    }
+    else if(player.pitch < -89){
+      player.pitch = -89;
+    }
+    float pitch = degToRad(player.pitch);
+    float yaw = normalizeDeg(degToRad(player.yRotation));
+    player.viewDir.x = cos(yaw) * cos(pitch);
+    player.viewDir.y = sin(pitch);
+    player.viewDir.z = sin(yaw) * cos(pitch);
+    player.viewDir = normalize(player.viewDir);
+    v3 side = cross(player.viewDir, V3(0.0, 1.0, 0.0));
+    v3 upDir = cross(normalize(side), player.viewDir);
+    v3 movementDir = V3(0.0, 0.0, 0.0);
+    if (keyboardState.moveForward) {
+      movementDir.x = movementDir.x + player.viewDir.x;
+      movementDir.z = movementDir.z + player.viewDir.z;
+    }
+    if (keyboardState.moveBackward) {
+      movementDir.x = movementDir.x - player.viewDir.x;
+      movementDir.z = movementDir.z - player.viewDir.z;
+    }
+    if (keyboardState.strafeRight) {
+      movementDir = movementDir + side;
+    }
+    if (keyboardState.strafeLeft) {
+      movementDir = movementDir - side;
+    }
+    if (keyboardState.jump && player.onGround) {
+      player.vel.y = sqrt(-.6f*gravity.y); // vf*vf = -g*.6
+      player.onGround = false;
+    }
+    if (keyboardState.duck) {
+      //movementDir = movementDir;
+    }
+
+    player.acc.y +=  lastFrameSec*gravity.y;
+    player.vel = player.vel + lastFrameSec*player.acc;
+    player.center = lastFrameSec*player.vel + player.center;
+    //player.viewDir = viewDir;
+    
+    //create player collision geometry
+    static AABB playerAABB;
+    static OBB playerOBB;
+    movementDir = normalize(movementDir);
+    playerAABB.center.x = player.center.x + (player.walkingSpeed * lastFrameSec * movementDir.x);
+    playerAABB.center.y = player.center.y + (player.walkingSpeed * lastFrameSec * movementDir.y);
+    playerAABB.center.z = player.center.z + (player.walkingSpeed * lastFrameSec * movementDir.z);
+    playerAABB.rad = V3(.125,.125,.125);
+    playerOBB.c = playerAABB.center;
+    playerOBB.u[0] = player.viewDir;
+    playerOBB.u[1] = V3(0.0f,1.0f,0.0f);
+    playerOBB.u[2] = side;
+    playerOBB.width = V3(.125,.125,.125);
+    bool noCols = true;
+
+    for(size_t i = 0; i < AABBs.size(); i++) {
+      if(isColliding(playerAABB, AABBs[i])) {
+        noCols = false;
+        break;
+      }
+    }
+    if(noCols){
+      for (size_t i = 0; i < OBBs.size(); i++) {
+        if(isColliding(playerOBB, OBBs[i])) {
+          noCols = false;
+          break;
+        }
+      }
+    }
+    if(noCols) {
+      player.center = playerAABB.center;
+    }
+    if(player.center.y < .5) {
+      player.center.y = .5;
+      player.acc.y = 0.0;
+      player.vel.y = 0.0;
+      player.onGround = true;
+    }
+}

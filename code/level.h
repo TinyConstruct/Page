@@ -1,6 +1,7 @@
 #ifndef __LEVEL__
 #define __LEVEL__
 #include "aro_math.h"
+#include "gamestate.h"
 
 struct AABB {
   v3 center;
@@ -24,6 +25,7 @@ public:
   void addAABB(v3& center, v3& rad);
   void addOOB(v3& center, v3 axes[3], v3& halfW);
   void initialize();
+  void LevelGeometry::movePlayer(Player& player, KeyboardState& keyboardState, float pitchDif, float yRotationDif, float lastFrameSec);
 };
 
 struct Tri {

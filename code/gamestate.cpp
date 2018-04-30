@@ -32,6 +32,3 @@ void Player::initialize() {
   sprintSpeed = 7.10f;
 }
 
-void movePlayer(Player& player, KeyboardState& keyboardState) {
-
-}

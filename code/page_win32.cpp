@@ -281,94 +281,11 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
         if(!keyboardState.pause){
         //get mouse and keyboard movement if not paused
           GetCursorPos(&mousePoint);
-          int mouseDifX = mousePoint.x - globalWindowLocation.centerX;
-          int mouseDifY = mousePoint.y - globalWindowLocation.centerY;
+          float yRotationDif = (mousePoint.x - globalWindowLocation.centerX)*mouseLookDampen;
+          float pitchDif = -(mousePoint.y - globalWindowLocation.centerY)*mouseLookDampen;
           SetCursorPos(globalWindowLocation.centerX, globalWindowLocation.centerY);
-          
-          v3 viewDir;
-          float pitch = degToRad(player.pitch);
-          float yaw = normalizeDeg(degToRad(player.yRotation));
-          player.pitch -= mouseDifY * mouseLookDampen;
-          player.yRotation += mouseDifX * mouseLookDampen;
-          if(player.pitch > 89){ 
-            player.pitch = 89;
-          }
-          else if(player.pitch < -89){
-            player.pitch = -89;
-          }
-          viewDir.x = cos(yaw) * cos(pitch);
-          viewDir.y = sin(pitch);
-          viewDir.z = sin(yaw) * cos(pitch);
-          viewDir = normalize(viewDir);
-          v3 side = cross(viewDir, V3(0.0, 1.0, 0.0));
-          v3 upDir = cross(normalize(side), viewDir);
-          v3 movementDir = V3(0.0, 0.0, 0.0);
-          if (keyboardState.moveForward) {
-            movementDir.x = movementDir.x + viewDir.x;
-            movementDir.z = movementDir.z + viewDir.z;
-          }
-          if (keyboardState.moveBackward) {
-            movementDir.x = movementDir.x - viewDir.x;
-            movementDir.z = movementDir.z - viewDir.z;
-          }
-          if (keyboardState.strafeRight) {
-            movementDir = movementDir + side;
-          }
-          if (keyboardState.strafeLeft) {
-            movementDir = movementDir - side;
-          }
-          if (keyboardState.jump && player.onGround) {
-            player.vel.y = sqrt(-.6f*gravity.y); // vf*vf = -g*.6
-            player.onGround = false;
-          }
-          if (keyboardState.duck) {
-            movementDir = movementDir;
-          }
 
-          player.acc.y +=  lastFrameSec*gravity.y;
-          player.vel = player.vel + lastFrameSec*player.acc;
-          player.center = lastFrameSec*player.vel + player.center;
-          player.viewDir = viewDir;
-          
-          //create player collision geometry
-          static AABB playerAABB;
-          static OBB playerOBB;
-          movementDir = normalize(movementDir);
-          playerAABB.center.x = player.center.x + (player.walkingSpeed * lastFrameSec * movementDir.x);
-          playerAABB.center.y = player.center.y + (player.walkingSpeed * lastFrameSec * movementDir.y);
-          playerAABB.center.z = player.center.z + (player.walkingSpeed * lastFrameSec * movementDir.z);
-          playerAABB.rad = V3(.125,.125,.125);
-
-          playerOBB.c = playerAABB.center;
-          playerOBB.u[0] = player.viewDir;
-          playerOBB.u[1] = V3(0.0f,1.0f,0.0f);
-          playerOBB.u[2] = side;
-          playerOBB.width = V3(.125,.125,.125);
-          bool noCols = true;
-
-          for(size_t i = 0; i < levelGeo.AABBs.size(); i++) {
-            if(isColliding(playerAABB, levelGeo.AABBs[i])) {
-              noCols = false;
-              break;
-            }
-          }
-          if(noCols){
-            for (size_t i = 0; i < levelGeo.OBBs.size(); i++) {
-              if(isColliding(playerOBB, levelGeo.OBBs[i])) {
-                noCols = false;
-                break;
-              }
-            }
-          }
-          if(noCols) {
-            player.center = playerAABB.center;
-          }
-          if(player.center.y < .5) {
-            player.center.y = .5;
-            player.acc.y = 0.0;
-            player.vel.y = 0.0;
-            player.onGround = true;
-          }
+          levelGeo.movePlayer(player, keyboardState, pitchDif, yRotationDif, lastFrameSec);
         }
         else {
           //game is paused, draw pause screen/menu/whatever
