@@ -30,15 +30,8 @@ const float playerDistPerSec = .25;
 static LevelGeometry levelGeo;
 static LevelData levelData;
 static Renderer renderer;
-KeyboardState keyboardState;
+static KeyboardState keyboardState;
 static TextureHandle texTable[MAX_TEX];
-
-bool isColliding(AABB a, AABB b) {
-  if (abs(a.center.x - b.center.x) > (a.rad.x + b.rad.x)) return false;
-  if (abs(a.center.y - b.center.y) > (a.rad.y + b.rad.y)) return false;
-  if (abs(a.center.z - b.center.z) > (a.rad.z + b.rad.z)) return false;
-  return true;
-}
 
 LRESULT CALLBACK
 win32MainWindowCallback(HWND window, UINT message, WPARAM WParam, LPARAM LParam) {       
@@ -229,11 +222,6 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
       float t = 0.0f;
       float spriteFlipCounter = 0.0f;
 
-      //load assets
-      
-      //renderer.loadTextureArray512(FLOOR1, "data/floor1.bmp", FLOOR2, "data/floor2.bmp", 
-      //  WALL2, "data/wall2.bmp", CEIL1, "data/ceil1.bmp");
-      
       //load level geometry/data
       levelData.initialize(&levelGeo, &renderer);
       levelGeo.initialize();
@@ -254,7 +242,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
       POINT mousePoint;
       SetCursorPos(globalWindowLocation.centerX, globalWindowLocation.centerY);
       float time = 0;
-      renderer.aspectRatio = (float)globalWindowDimensions.width / (float) globalWindowDimensions.height;
+      renderer.aspectRatio = (float) globalWindowDimensions.width / (float) globalWindowDimensions.height;
 
       v3 gravity = V3(0.0, -9.86f, 0.0);
       player.vel = V3(0.0,0.0,0.0);
@@ -262,7 +250,6 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
       float mouseLookDampen = .5;
       v3 playerOffset = V3(0.0,0.0,0.0);
 
-      //createTextureArrayBuffer(10,10);
 //// Main Game Loop ////////
       while(globalRunning)
       {
@@ -299,8 +286,8 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
           GetCursorPos(&mousePoint);
           int mouseDifX = mousePoint.x - globalWindowLocation.centerX;
           int mouseDifY = mousePoint.y - globalWindowLocation.centerY;
-          player.pitch -= mouseDifY*mouseLookDampen;
-          player.yRotation += mouseDifX*mouseLookDampen;
+          player.pitch -= mouseDifY * mouseLookDampen;
+          player.yRotation += mouseDifX * mouseLookDampen;
           if(player.pitch > 89){ 
             player.pitch = 89;
           }
@@ -341,22 +328,39 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
           player.vel = player.vel + lastFrameSec*player.acc;
           player.center = lastFrameSec*player.vel + player.center;
           
-          AABB playerBox;
+          //create player collision geometry
+          static AABB playerAABB;
+          static OBB playerOBB;
           movementDir = normalize(movementDir);
-          playerBox.center.x = player.center.x + (player.walkingSpeed * lastFrameSec * movementDir.x);
-          playerBox.center.y = player.center.y + (player.walkingSpeed * lastFrameSec * movementDir.y);
-          playerBox.center.z = player.center.z + (player.walkingSpeed * lastFrameSec * movementDir.z);
+          playerAABB.center.x = player.center.x + (player.walkingSpeed * lastFrameSec * movementDir.x);
+          playerAABB.center.y = player.center.y + (player.walkingSpeed * lastFrameSec * movementDir.y);
+          playerAABB.center.z = player.center.z + (player.walkingSpeed * lastFrameSec * movementDir.z);
+          playerAABB.rad = V3(.125,.125,.125);
           player.viewDir = viewDir;
+
+          playerOBB.c = playerAABB.center;
+          playerOBB.u[0] = player.viewDir;
+          playerOBB.u[1] = V3(0.0f,1.0f,0.0f);
+          playerOBB.u[2] = side;
+          playerOBB.width = V3(.125,.125,.125);
           bool noCols = true;
 
           for(size_t i = 0; i < levelGeo.AABBs.size(); i++) {
-            if(isColliding(playerBox, levelGeo.AABBs[i])) {
+            if(isColliding(playerAABB, levelGeo.AABBs[i])) {
               noCols = false;
               break;
             }
           }
+          if(noCols){
+            for (size_t i = 0; i < levelGeo.OBBs.size(); i++) {
+              if(isColliding(playerOBB, levelGeo.OBBs[i])) {
+                noCols = false;
+                break;
+              }
+            }
+          }
           if(noCols) {
-            player.center = playerBox.center;
+            player.center = playerAABB.center;
           }
           if(player.center.y < .5) {
             player.center.y = .5;

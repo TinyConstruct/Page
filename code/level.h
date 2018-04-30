@@ -13,6 +13,9 @@ struct OBB {
   v3 width; //halfwidth extants along OBB axes
 };
 
+int isColliding(OBB& a, OBB& b);
+int isColliding(AABB& a, AABB& b);
+
 class LevelGeometry {
 public:
   std::vector<AABB> AABBs;
@@ -20,7 +23,6 @@ public:
   
   void addAABB(v3& center, v3& rad);
   void addOOB(v3& center, v3 axes[3], v3& halfW);
-  int TestOBBOBB(OBB& a, OBB& b);
   void initialize();
 };
 

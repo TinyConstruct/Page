@@ -17,8 +17,7 @@ void LevelGeometry::addAABB(v3& center, v3& rad) {
 }
 
 void LevelGeometry::initialize() {
-  AABBs.reserve(100);
-  OBBs.reserve(100);
+  
 }
 
 void LevelGeometry::addOOB(v3& center, v3 axes[3], v3& halfW) {
@@ -78,6 +77,7 @@ void LevelData::addTexturedQuad(v3& vert1, v3& vert2, v3& vert3, v3& vert4, int 
 
 void LevelData::finalizeQuads() {
   for(size_t i = 0; i < quads->size(); i++){
+
   //add rendering information: 
     Vertpcnu a, b, c, d;
     v2 uvScale = (*quads)[i].texScale;
@@ -93,6 +93,7 @@ void LevelData::finalizeQuads() {
     renderer->addTri(c, d, a);
     v3 center = .5f*(a.position - c.position) + c.position;
     v3 rad;
+
   //add collision geometry:
     //test if axis aligned
     if( ((a.position.x == b.position.x) && (b.position.x == c.position.x) &&
@@ -107,9 +108,9 @@ void LevelData::finalizeQuads() {
         rad.z = magnitude(b.position - c.position)/2.0f;
       }
       else {
-        rad.x = max(0.01f, 1.05f*(abs(b.position.x - c.position.x)/2.0f));
+        rad.x = max(0.125f, 1.05f*(abs(b.position.x - c.position.x)/2.0f));
         rad.y = 1.05f*(abs(b.position.y - a.position.y) / 2.0f);
-        rad.z = max(0.01f, (abs(b.position.z - a.position.z)/2.0f));
+        rad.z = max(0.125f, (abs(b.position.z - a.position.z)/2.0f));
       }
       geo->addAABB(center, rad);
     }
@@ -126,12 +127,12 @@ void LevelData::finalizeQuads() {
       axes[2] = cross(axes[0], axes[1]);
 
       //renderer->debugDrawLine(center, center + 20*rad.x*axes[0]);
-      renderer->debugDrawLine(center, center + 20*rad.y*axes[1]);
-      renderer->debugDrawLine(center, center + 20*rad.z*axes[2]);
+      //renderer->debugDrawLine(center, center + 20*rad.y*axes[1]);
+      //renderer->debugDrawLine(center, center + 20*rad.z*axes[2]);
 
       rad.x = magnitude(dir1)*1.1f/2.0f;
       rad.y = magnitude(dir2)*1.1f/2.0f;
-      rad.z = 0.01f;
+      rad.z = 0.125f;
 
       geo->addOOB(center, axes, rad);
     }
@@ -292,7 +293,7 @@ void LevelData::loadLevelFromTextFile(char* path) {
   }
 }
 
-int LevelGeometry::TestOBBOBB(OBB& a, OBB& b) {
+int isColliding(OBB& a, OBB& b) {
   float ra, rb;
   float EPSILON = .001f;
   m3x3 R, AbsR;
@@ -360,5 +361,12 @@ int LevelGeometry::TestOBBOBB(OBB& a, OBB& b) {
   rb = b.width.n[0] * AbsR.n[2][1] + b.width.n[1] * AbsR.n[2][0];
   if (abs(t.n[1] * R.n[0][2] - t.n[0] * R.n[1][2]) > ra + rb) return 0;
   // Since no separating axis is found, the OBBs must be intersecting
+  return 1;
+}
+
+int isColliding(AABB& a, AABB& b) {
+  if (abs(a.center.x - b.center.x) > (a.rad.x + b.rad.x)) return 0;
+  if (abs(a.center.y - b.center.y) > (a.rad.y + b.rad.y)) return 0;
+  if (abs(a.center.z - b.center.z) > (a.rad.z + b.rad.z)) return 0;
   return 1;
 }
