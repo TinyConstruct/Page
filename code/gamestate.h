@@ -1,6 +1,10 @@
 #ifndef __GAMESTATE__
 #define __GAMESTATE__
 #include "aro_math.h"
+
+static const v3 gravity = V3(0.0f, -9.86f, 0.0f);
+static const float mouseLookDampen = .5f;
+
 class Player {
   public:
   v3 center;
@@ -14,12 +18,19 @@ class Player {
   void initialize();
 };
 
+class Camera {
+  v3 center;
+  float yRotation, pitch;
+  v3 viewDir;
+};
+
 class KeyboardState {
 public:
   bool strafeLeft, strafeRight, moveForward, moveBackward;
   bool turnLeft, turnRight;
   bool pause;
   bool jump, duck;
+  bool cameraLock;
   void initialize();
 };
 

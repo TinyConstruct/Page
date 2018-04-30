@@ -17,6 +17,7 @@ void KeyboardState::initialize() {
   turnLeft = false;  
   turnRight = false;
   pause = false;
+  cameraLock = true;
 }
 
 void Player::initialize() {
@@ -31,4 +32,6 @@ void Player::initialize() {
   sprintSpeed = 7.10f;
 }
 
+void movePlayer(Player& player, KeyboardState& keyboardState) {
 
+}

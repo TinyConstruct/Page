@@ -32,6 +32,8 @@ static LevelData levelData;
 static Renderer renderer;
 static KeyboardState keyboardState;
 static TextureHandle texTable[MAX_TEX];
+static Camera playerCamera;
+static Camera freeCamera;
 
 LRESULT CALLBACK
 win32MainWindowCallback(HWND window, UINT message, WPARAM WParam, LPARAM LParam) {       
@@ -68,6 +70,10 @@ win32MainWindowCallback(HWND window, UINT message, WPARAM WParam, LPARAM LParam)
         else {
           keyboardState.pause = !keyboardState.pause;
         }
+      }
+      break;
+      case 'C': {
+        keyboardState.cameraLock = !keyboardState.cameraLock;
       }
       break;
       case VK_ESCAPE: {
@@ -225,12 +231,12 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
       //load level geometry/data
       levelData.initialize(&levelGeo, &renderer);
       levelGeo.initialize();
+
       levelData.bakeTestLevel();
 
       for(size_t i = 0; i < levelGeo.AABBs.size(); i++) {
         renderer.addDebugVolume(levelGeo.AABBs[i].center, levelGeo.AABBs[i].rad);
       }
-
       for (size_t i = 0; i < levelGeo.OBBs.size(); i++) {
         renderer.addDebugVolume(levelGeo.OBBs[i].c, levelGeo.OBBs[i].u, levelGeo.OBBs[i].width);
       }
@@ -241,14 +247,11 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
       player.initialize();
       POINT mousePoint;
       SetCursorPos(globalWindowLocation.centerX, globalWindowLocation.centerY);
-      float time = 0;
+      float time = 0.0f;
       renderer.aspectRatio = (float) globalWindowDimensions.width / (float) globalWindowDimensions.height;
-
-      v3 gravity = V3(0.0, -9.86f, 0.0);
-      player.vel = V3(0.0,0.0,0.0);
-      player.acc = V3(0.0,0.0,0.0);
-      float mouseLookDampen = .5;
-      v3 playerOffset = V3(0.0,0.0,0.0);
+      player.vel = V3(0.0f,0.0f,0.0f);
+      player.acc = V3(0.0f,0.0f,0.0f);
+      v3 playerOffset = V3(0.0f,0.0f,0.0f);
 
 //// Main Game Loop ////////
       while(globalRunning)
@@ -261,7 +264,6 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
         float lastFrameSec = (float)dif / (float) counterFreq.QuadPart;
         float fps = (float) counterFreq.QuadPart / (float)dif;
         lastCounter.QuadPart = beginCounter.QuadPart;
-
         time += lastFrameSec;
 
         //poll for keyboard input
@@ -276,16 +278,16 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
           DispatchMessageA(&message);
         }
 
-        v3 viewDir;
-        float pitch = degToRad(player.pitch);
-        float yaw = degToRad(player.yRotation);
-        yaw = normalizeDeg(yaw);
-
         if(!keyboardState.pause){
         //get mouse and keyboard movement if not paused
           GetCursorPos(&mousePoint);
           int mouseDifX = mousePoint.x - globalWindowLocation.centerX;
           int mouseDifY = mousePoint.y - globalWindowLocation.centerY;
+          SetCursorPos(globalWindowLocation.centerX, globalWindowLocation.centerY);
+          
+          v3 viewDir;
+          float pitch = degToRad(player.pitch);
+          float yaw = normalizeDeg(degToRad(player.yRotation));
           player.pitch -= mouseDifY * mouseLookDampen;
           player.yRotation += mouseDifX * mouseLookDampen;
           if(player.pitch > 89){ 
@@ -294,7 +296,6 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
           else if(player.pitch < -89){
             player.pitch = -89;
           }
-          SetCursorPos(globalWindowLocation.centerX, globalWindowLocation.centerY);
           viewDir.x = cos(yaw) * cos(pitch);
           viewDir.y = sin(pitch);
           viewDir.z = sin(yaw) * cos(pitch);
@@ -308,7 +309,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
           }
           if (keyboardState.moveBackward) {
             movementDir.x = movementDir.x - viewDir.x;
-            movementDir.z = movementDir.x - viewDir.z;
+            movementDir.z = movementDir.z - viewDir.z;
           }
           if (keyboardState.strafeRight) {
             movementDir = movementDir + side;
@@ -327,6 +328,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
           player.acc.y +=  lastFrameSec*gravity.y;
           player.vel = player.vel + lastFrameSec*player.acc;
           player.center = lastFrameSec*player.vel + player.center;
+          player.viewDir = viewDir;
           
           //create player collision geometry
           static AABB playerAABB;
@@ -336,7 +338,6 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
           playerAABB.center.y = player.center.y + (player.walkingSpeed * lastFrameSec * movementDir.y);
           playerAABB.center.z = player.center.z + (player.walkingSpeed * lastFrameSec * movementDir.z);
           playerAABB.rad = V3(.125,.125,.125);
-          player.viewDir = viewDir;
 
           playerOBB.c = playerAABB.center;
           playerOBB.u[0] = player.viewDir;
@@ -379,12 +380,6 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
 
         v3 cameraPosition = V3(player.center.x, player.center.y, player.center.z) + playerOffset;
         
-        char buffer[512];
-        sprintf_s(buffer, "Center: x %f y %f z %f\n", player.center.x, player.center.y, player.center.z);
-        OutputDebugStringA(buffer);
-        
-        sprintf_s(buffer, "Player view: x %f y %f z %f\n", viewDir.x, viewDir.y, viewDir.z);
-        OutputDebugStringA(buffer);
 
         //m4x4 modelMat = identity();
         //GLint modelID = glGetUniformLocation(renderer.shaderID, "model");
