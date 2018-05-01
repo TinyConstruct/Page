@@ -25,7 +25,8 @@ public:
   void addAABB(v3& center, v3& rad);
   void addOOB(v3& center, v3 axes[3], v3& halfW);
   void initialize();
-  void LevelGeometry::movePlayer(Player& player, KeyboardState& keyboardState, float pitchDif, float yRotationDif, float lastFrameSec);
+  void movePlayer(Player& player, KeyboardState& keyboardState, float pitchDif, float yRotationDif, float lastFrameSec);
+  void moveFreeCam(Camera& freeCamera, KeyboardState& keyboardState, float pitchDif, float yRotationDif, float lastFrameSec);
 };
 
 struct Tri {

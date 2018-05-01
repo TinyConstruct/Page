@@ -4,6 +4,7 @@
 
 static const v3 gravity = V3(0.0f, -9.86f, 0.0f);
 static const float mouseLookDampen = .5f;
+static const float playerWalkingSpeed = 1.3f;
 
 class Player {
   public:
@@ -19,6 +20,7 @@ class Player {
 };
 
 class Camera {
+public:
   v3 center;
   float yRotation, pitch;
   v3 viewDir;

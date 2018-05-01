@@ -253,19 +253,26 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
       player.acc = V3(0.0f,0.0f,0.0f);
       v3 playerOffset = V3(0.0f,0.0f,0.0f);
 
+      static LARGE_INTEGER beginProfGL, endProfGL;
+      LARGE_INTEGER lastStutter;
+      QueryPerformanceCounter(&lastStutter);
 //// Main Game Loop ////////
-      while(globalRunning)
-      {
+      while(globalRunning) {
         //update timer
         LARGE_INTEGER beginCounter;
-        QueryPerformanceCounter(&beginCounter);
+        static LARGE_INTEGER beginProfMsg, endProfMsg;
+        static LARGE_INTEGER beginProfMove, endProfMove;
+        assert(0 != QueryPerformanceCounter(&beginCounter));
         LONGLONG dif = (beginCounter.QuadPart - lastCounter.QuadPart);
         float lastFrameMS = (float) (1000 * dif) / (float)counterFreq.QuadPart;
         float lastFrameSec = (float)dif / (float) counterFreq.QuadPart;
+        //assert((time < 5 ) || (dif < 100000));
         float fps = (float) counterFreq.QuadPart / (float)dif;
         lastCounter.QuadPart = beginCounter.QuadPart;
         time += lastFrameSec;
 
+        
+        QueryPerformanceCounter(&beginProfMsg);
         //poll for keyboard input
         MSG message;
         while(PeekMessage(&message, 0, 0, 0, PM_REMOVE))
@@ -277,6 +284,8 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
           TranslateMessage(&message);
           DispatchMessageA(&message);
         }
+        QueryPerformanceCounter(&endProfMsg);
+        
 
         if(!keyboardState.pause){
         //get mouse and keyboard movement if not paused
@@ -284,25 +293,42 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
           float yRotationDif = (mousePoint.x - globalWindowLocation.centerX)*mouseLookDampen;
           float pitchDif = -(mousePoint.y - globalWindowLocation.centerY)*mouseLookDampen;
           SetCursorPos(globalWindowLocation.centerX, globalWindowLocation.centerY);
+          if(keyboardState.cameraLock){
+            QueryPerformanceCounter(&beginProfMove);
+            levelGeo.movePlayer(player, keyboardState, pitchDif, yRotationDif, lastFrameSec);
+            playerCamera.center = player.center;
+            QueryPerformanceCounter(&endProfMove);
 
-          levelGeo.movePlayer(player, keyboardState, pitchDif, yRotationDif, lastFrameSec);
+          }
+          else {
+            levelGeo.moveFreeCam(freeCamera, keyboardState, pitchDif, yRotationDif, lastFrameSec);
+          }
         }
         else {
           //game is paused, draw pause screen/menu/whatever
         }
+
         glUseProgram(renderer.shaderID);
         glClearColor(1.0,0.0,1.0,1.0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        wglSwapInterval(1);
 
-
-        v3 cameraPosition = V3(player.center.x, player.center.y, player.center.z) + playerOffset;
+        v3 cameraPosition, viewDir;
+        if (keyboardState.cameraLock) {
+          cameraPosition = V3(player.center.x, player.center.y, player.center.z) + playerOffset;
+          viewDir = player.viewDir;
+        }
+        else {
+          cameraPosition = freeCamera.center;
+          viewDir = freeCamera.viewDir;
+        }
         
 
         //m4x4 modelMat = identity();
         //GLint modelID = glGetUniformLocation(renderer.shaderID, "model");
         //glUniformMatrix4fv(modelID, 1, GL_FALSE, (float*)modelMat.n);
 
-        m4x4 viewMat = aroLookat(cameraPosition, cameraPosition + player.viewDir);
+        m4x4 viewMat = aroLookat(cameraPosition, cameraPosition + viewDir);
         //GLint viewID = glGetUniformLocation(renderer.shaderID, "view");
         //glUniformMatrix4fv(viewID, 1, GL_FALSE, (float*) viewMat.n);
         glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(m4x4), viewMat.n);
@@ -314,11 +340,29 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
         glBufferSubData(GL_UNIFORM_BUFFER, sizeof(m4x4), sizeof(m4x4), projMat.n);
 
         GLint playerPosID = glGetUniformLocation(renderer.shaderID, "playerPos");
-        glBufferSubData(GL_UNIFORM_BUFFER, sizeof(m4x4)*2, sizeof(v3), &player.center);
+        glBufferSubData(GL_UNIFORM_BUFFER, sizeof(m4x4)*2, sizeof(v3), &cameraPosition);
 
         renderer.draw();
         glFinish();
+        QueryPerformanceCounter(&beginProfGL);
         SwapBuffers(dc);
+        QueryPerformanceCounter(&endProfGL);
+        
+        
+
+        long long swapdif = endProfGL.QuadPart - beginProfGL.QuadPart;
+        
+        if (swapdif > (long long) 10000) {
+          float lastStutterTime = (float)(1000 * (endProfGL.QuadPart - lastStutter.QuadPart) / (float)counterFreq.QuadPart);
+          QueryPerformanceCounter(&lastStutter);
+          char buffer[512];
+          sprintf_s(buffer, "time since stutter: %f\n", lastStutterTime);
+          OutputDebugStringA(buffer);
+          sprintf_s(buffer, "stutter length: %lld\n", swapdif);
+          OutputDebugStringA(buffer);
+        }
+        
+
       }    
     }
     else
