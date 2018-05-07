@@ -460,10 +460,12 @@ void LevelGeometry::moveFreeCam(Camera& freeCamera, KeyboardState& keyboardState
   v3 movementDir = V3(0.0, 0.0, 0.0);
   if (keyboardState.moveForward) {
     movementDir.x = movementDir.x + freeCamera.viewDir.x;
+    movementDir.y = movementDir.y + freeCamera.viewDir.y;
     movementDir.z = movementDir.z + freeCamera.viewDir.z;
   }
   if (keyboardState.moveBackward) {
     movementDir.x = movementDir.x - freeCamera.viewDir.x;
+    movementDir.y = movementDir.y - freeCamera.viewDir.y;
     movementDir.z = movementDir.z - freeCamera.viewDir.z;
   }
   if (keyboardState.strafeRight) {
@@ -478,5 +480,5 @@ void LevelGeometry::moveFreeCam(Camera& freeCamera, KeyboardState& keyboardState
   if (keyboardState.duck) {
     movementDir = movementDir - upDir;
   }
-  freeCamera.center = freeCamera.center + playerWalkingSpeed*lastFrameSec*movementDir;
+  freeCamera.center = freeCamera.center + playerWalkingSpeed*lastFrameSec*normalize(movementDir);
 }
