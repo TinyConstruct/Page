@@ -108,9 +108,9 @@ void LevelData::finalizeQuads() {
         rad.z = magnitude(b.position - c.position)/2.0f;
       }
       else {
-        rad.x = max(0.125f, 1.05f*(abs(b.position.x - c.position.x)/2.0f));
+        rad.x = max(0.125f, 1.05f*(abs(b.position.x - c.position.x) / 2.0f));
         rad.y = 1.05f*(abs(b.position.y - a.position.y) / 2.0f);
-        rad.z = max(0.125f, (abs(b.position.z - a.position.z)/2.0f));
+        rad.z = max(0.125f, 1.05f*(abs(b.position.z - c.position.z) / 2.0f));
       }
       geo->addAABB(center, rad);
     }

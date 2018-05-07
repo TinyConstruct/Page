@@ -344,14 +344,13 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
 
         renderer.draw();
         glFinish();
-        QueryPerformanceCounter(&beginProfGL);
+        //QueryPerformanceCounter(&beginProfGL);
         SwapBuffers(dc);
-        QueryPerformanceCounter(&endProfGL);
+        //QueryPerformanceCounter(&endProfGL);
         
         
-
+        /*
         long long swapdif = endProfGL.QuadPart - beginProfGL.QuadPart;
-        
         if (swapdif > (long long) 10000) {
           float lastStutterTime = (float)(1000 * (endProfGL.QuadPart - lastStutter.QuadPart) / (float)counterFreq.QuadPart);
           QueryPerformanceCounter(&lastStutter);
@@ -361,7 +360,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
           sprintf_s(buffer, "stutter length: %lld\n", swapdif);
           OutputDebugStringA(buffer);
         }
-        
+        */
 
       }    
     }
