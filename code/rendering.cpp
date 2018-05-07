@@ -13,28 +13,6 @@
 #include "gamestate.h"
 
 #include "rendering.h"
-const char* vertexSource = R"FOO(
-#version 450 core
-layout (location = 0) in vec3 position;
-layout (location = 1) in vec3 color;
-layout (location = 2) in vec3 normal;
-layout (location = 3) in vec3 texCoordIn;
-out vec3 colorOutFromVert;
-out vec3 normalOutFromVert;
-out vec3 fragPos;
-out vec3 texCoordOutFromVert;
-uniform mat4 projection;
-uniform mat4 view;
-
-void main()
-{
-  gl_Position =  projection * view * vec4(position.x, position.y, position.z, 1.0f);
-  fragPos = position.xyz;
-  colorOutFromVert = color;
-  normalOutFromVert = normal;
-  texCoordOutFromVert = texCoordIn;
-}
-)FOO";
 
 const char* vertexSourceUBUF = R"FOO(
 #version 450 core
@@ -97,34 +75,18 @@ void main()
 }
 )FOO";
 
-const char* debugFragmentSource = R"FOO(
+const char* debugWhiteFragmentSource = R"FOO(
 #version 450 core
-in vec3 colorOutFromVert;
-in vec3 normalOutFromVert;
 in vec3 fragPos;
-in vec3 texCoordOutFromVert;
-uniform vec3 lightPos;
-uniform sampler2DArray textureData;
-uniform vec3 playerPos;
+layout(std140) uniform GlobalMatrices {
+  mat4 view;
+  mat4 projection;
+  vec3 playerPos;
+};
 out vec4 resultColor;
 void main()
 {
-  vec4 texColor = texture(textureData, vec3(texCoordOutFromVert.xyz));
-  vec3 lightColor = vec3(1.0,1.0,1.0);
-  float ambientIntensity= .1;
-  float specularIntensity = 1.0;
-  vec3 viewerDir = normalize(playerPos - fragPos);
-  vec3 lightDir = normalize(lightPos - fragPos);
-  vec3 norm = normalize(normalOutFromVert);
-  vec3 reflectedDir = reflect(-lightDir, norm);
-
-  float spec = pow(max(dot(viewerDir, reflectedDir), 0.0), 32);
-
-  float diff = max(dot(norm, lightDir), 0.0);
-  vec3 ambient = lightColor*ambientIntensity;
-  vec3 diffuse = diff * lightColor;
-  vec3 specular = specularIntensity * spec * lightColor;  
-  resultColor = (vec4((ambient + diffuse + specular), 1.0) * vec4(texColor.rgb, 0.5));
+  resultColor = vec4(1.0,1.0,1.0,1.0);
 }
 )FOO";
 
@@ -214,10 +176,6 @@ void compileShader(GLuint* shaderID, const char* vSrc, const char* fSrc) {
 }
 
 void Renderer::initialize() {
-  //meshes.reserve(100);
-  level.reserve(100);
-  levelElements.reserve(100);
-
   compileShader(&shaderID, vertexSourceUBUF, fragmentSource);
   GLuint vao;
   glGenVertexArrays(1, &vao);
@@ -248,9 +206,7 @@ void Renderer::initialize() {
   glEnableVertexAttribArray(texCoord);
 
   #if DEBUG_BUILD
-    compileShader(&debugShaderID, vertexSource, debugFragmentSource);
-    debugBoundingVerts.reserve(100);
-    debugBoundingElements.reserve(100);
+    compileShader(&debugShaderID, vertexSourceUBUF, debugWhiteFragmentSource);
     renderDebug = false;
     glGenBuffers(1, &debugVbo);
     glGenBuffers(1, &debugEbo);
@@ -449,16 +405,13 @@ void Renderer::draw() {
 
   #if DEBUG_BUILD
     if(renderDebug){
-      //glUseProgram(debugShaderID);
-      glEnable(GL_LINE_SMOOTH);
-      glLineWidth(50.0);
+      glUseProgram(debugShaderID);
       glBindBuffer(GL_ARRAY_BUFFER, debugVbo);
       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, debugEbo);
       posAttrib = glGetAttribLocation(shaderID, "position");
       glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(v3), 0);
       glEnableVertexAttribArray(posAttrib);
       glDrawElements(GL_LINES, debugBoundingElements.size(), GL_UNSIGNED_INT, 0);
-      glLineWidth(1.0);
     }
   #endif
 }

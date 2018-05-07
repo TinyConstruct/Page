@@ -58,21 +58,6 @@ void LevelData::addTexturedQuad(v3& vert1, v3& vert2, v3& vert3, v3& vert4, int 
   q.d = vert4;
   q.texHandle = renderer->getGLTexID(texID);
   quads->push_back(q);
-  /*
-  v3 center = .5*(q.a - q.c) + q.c;
-  v3 rad;
-  //note: currently assuming axis-aligned, either wall or floor
-  if(q.a.y == q.b.y) {//floor or ceiling
-    rad.x = magnitude(q.a - q.b)/2.0;
-    rad.y = 0.2;
-    rad.z = magnitude(q.b- q.c)/2.0;
-  }
-  else {
-    rad.x = max(0.2, 1.05*(abs(q.b.x - q.c.x)/2.0));
-    rad.y = 1.05*(abs(q.b.y - q.a.y) / 2.0);
-    rad.z = max(0.2, (abs(q.b.z - q.a.z)/2.0));
-  }
-  level->addAABB(center, rad);*/
 }
 
 void LevelData::finalizeQuads() {
@@ -95,7 +80,7 @@ void LevelData::finalizeQuads() {
     v3 rad;
 
   //add collision geometry:
-    //test if axis aligned
+    //if axis aligned:
     if( ((a.position.x == b.position.x) && (b.position.x == c.position.x) &&
           (c.position.x == d.position.x)) || 
         ((a.position.y == b.position.y) && (b.position.y == c.position.y) &&
@@ -115,7 +100,6 @@ void LevelData::finalizeQuads() {
       geo->addAABB(center, rad);
     }
     //if not axis aligned, create a bounding box along local axes
-    //note: assume rectangle for now
     else {
       v3 axes[3];
       v3 dir1, dir2;
