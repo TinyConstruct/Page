@@ -33,6 +33,7 @@ gl_gen_vertex_arrays* glGenVertexArrays;
 gl_bind_vertex_array* glBindVertexArray;
 gl_get_uniform_location* glGetUniformLocation;
 gl_uniform_1f* glUniform1f;
+gl_uniform_1i* glUniform1i;
 gl_uniform_2f* glUniform2f;
 gl_uniform_3f* glUniform3f;
 gl_uniform_4f* glUniform4f;
@@ -117,6 +118,7 @@ static bool loadGLCoreFunctions() {
   if(!(glBindVertexArray = (gl_bind_vertex_array*) getWin32GLFunc("glBindVertexArray")) ){return false;}    
   if(!(glGetUniformLocation  = (gl_get_uniform_location*) getWin32GLFunc("glGetUniformLocation")) ){return false;}    
   if(!(glUniform1f = (gl_uniform_1f*) getWin32GLFunc("glUniform1f")) ){return false;}    
+  if(!(glUniform1i = (gl_uniform_1i*) getWin32GLFunc("glUniform1i")) ){return false;}    
   if(!(glUniform2f = (gl_uniform_2f*) getWin32GLFunc("glUniform2f")) ){return false;}    
   if(!(glUniform3f = (gl_uniform_3f*) getWin32GLFunc("glUniform3f")) ){return false;}    
   if(!(glUniform4f = (gl_uniform_4f*) getWin32GLFunc("glUniform4f")) ){return false;}    

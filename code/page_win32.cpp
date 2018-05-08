@@ -31,7 +31,6 @@ static LevelGeometry levelGeo;
 static LevelData levelData;
 static Renderer renderer;
 static KeyboardState keyboardState;
-static TextureHandle texTable[MAX_TEX];
 static Camera playerCamera;
 static Camera freeCamera;
 
@@ -308,7 +307,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
           //game is paused, draw pause screen/menu/whatever
         }
 
-        glUseProgram(renderer.shaderID);
+
         glClearColor(1.0,0.0,1.0,1.0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         wglSwapInterval(1);
@@ -324,19 +323,12 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
         }
         
 
-        //m4x4 modelMat = identity();
-        //GLint modelID = glGetUniformLocation(renderer.shaderID, "model");
-        //glUniformMatrix4fv(modelID, 1, GL_FALSE, (float*)modelMat.n);
 
         m4x4 viewMat = aroLookat(cameraPosition, cameraPosition + viewDir);
-        //GLint viewID = glGetUniformLocation(renderer.shaderID, "view");
-        //glUniformMatrix4fv(viewID, 1, GL_FALSE, (float*) viewMat.n);
         glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(m4x4), viewMat.n);
 
         m4x4 projMat; 
         aroPerspective(projMat, 60.0f, renderer.aspectRatio, 0.1f, 1000.0f);
-        //GLint projID = glGetUniformLocation(renderer.shaderID, "projection");
-        //glUniformMatrix4fv(projID, 1, GL_FALSE, (float*)projMat.n);
         glBufferSubData(GL_UNIFORM_BUFFER, sizeof(m4x4), sizeof(m4x4), projMat.n);
 
         GLint playerPosID = glGetUniformLocation(renderer.shaderID, "playerPos");

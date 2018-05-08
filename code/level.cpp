@@ -138,7 +138,7 @@ void LevelData::bakeTestLevel() {
   //send quads/tris to LevelGeometry for bounding boxes
 }
 
-void LevelData::preLoadTextureArray512(int numTexes, char* tex1, char* tex2, char* tex3, char* tex4) {
+void LevelData::preLoadTextureArray512(int numTexes, char* tex1, char* tex2, char* tex3, char* tex4, bool hasNormalMap) {
   int id1, id2, id3, id4;
   char *p1, *p2, *p3, *p4;
   char path1[255] = "data/";
@@ -172,7 +172,49 @@ void LevelData::preLoadTextureArray512(int numTexes, char* tex1, char* tex2, cha
   else {
     p4 = NULL;
   }
-  renderer->loadTextureArray512(id1, p1, id2, p2, id3, p3, id4, p4);
+  renderer->loadTextureArray512(renderer->texTable, id1, p1, id2, p2, id3, p3, id4, p4);
+  if(hasNormalMap) {
+    char npath1[255] = "data/";
+    char npath2[255] = "data/";
+    char npath3[255] = "data/";
+    char npath4[255] = "data/";
+    char nTex1[255] = "n_";
+    char nTex2[255] = "n_";
+    char nTex3[255] = "n_";
+    char nTex4[255] = "n_";
+    strcat_s(nTex1, tex1);
+    id1 = texNormStrToID(nTex1);
+    strcat_s(npath1, nTex1);
+    p1 = npath1;
+    if(numTexes > 1) {
+      strcat_s(nTex2, tex2);
+      id2 = texNormStrToID(nTex2);
+      strcat_s(npath2, nTex2);
+      p2 = npath2;
+    }
+    else {
+      p2 = NULL;
+    }
+    if(numTexes > 2) {
+      strcat_s(nTex3, tex3);
+      id3 = texNormStrToID(nTex3);
+      strcat_s(npath3, nTex3);
+      p3 = npath3;
+    }
+    else {
+      p3 = NULL;
+    }
+    if(numTexes > 3) {
+      strcat_s(nTex4, tex4);
+      id4 = texNormStrToID(nTex4);
+      strcat_s(npath4, nTex4);
+      p4 = npath4;
+    }
+    else {
+      p4 = NULL;
+    }
+    renderer->loadTextureArray512(renderer->texNormTable, id1, p1, id2, p2, id3, p3, id4, p4);
+  }
 }
 char* LevelData::processQuadTripple(char* str, v3* v) {
   char buffer[255];
@@ -249,10 +291,18 @@ void LevelData::loadLevelFromTextFile(char* path) {
   char* eof = readPtr + r.contentsSize;
   std::vector<TexturedQuad>* qs = new std::vector<TexturedQuad>;
   while(readPtr != eof) {
+    //Branch for reading texture names
     if(*readPtr=='*' && *(readPtr + 1)=='*'){
       texNum++;
       if(texNum > 3) {
-        //load textures
+        //load textures in queue
+        //TODO: add preload here too for when there are >4 textures
+        // preLoadTextureArray512(texNum + 1, texes[0], texes[1], texes[2], texes[3]);
+        // texNum = -1
+        //for(size_t i = 0; i < qs->size(); i++) {
+        //  TexturedQuad q = (*qs)[i];
+        //  addTexturedQuad(q);
+        //}
       }
       readPtr+=3;
       writePtr = &texes[texNum][0];
@@ -261,6 +311,7 @@ void LevelData::loadLevelFromTextFile(char* path) {
       }
       *writePtr = '\0';
     }
+    //branch for reading quad points
     else if(*readPtr == '(') {
       TexturedQuad q;
        readPtr = processQuadTextLine(readPtr, &q);
@@ -269,8 +320,8 @@ void LevelData::loadLevelFromTextFile(char* path) {
     }
     readPtr++;
   }
-  //load textures
-  preLoadTextureArray512(texNum + 1, texes[0], texes[1], texes[2], texes[3]);
+  //load textures that are still in queue
+  preLoadTextureArray512(texNum + 1, texes[0], texes[1], texes[2], texes[3], true);
   for(size_t i = 0; i < qs->size(); i++) {
     TexturedQuad q = (*qs)[i];
     addTexturedQuad(q);

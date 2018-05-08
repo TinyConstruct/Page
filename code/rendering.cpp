@@ -43,6 +43,7 @@ void main()
 const char* fragmentSource = R"FOO(
 #version 450 core
 uniform sampler2DArray textureData;
+uniform sampler2DArray bumpMap;
 in vec3 colorOutFromVert;
 in vec3 normalOutFromVert;
 in vec3 fragPos;
@@ -120,6 +121,43 @@ int texStrToID(char* str) {
   }
   else if(strcmpAny(str, "wall2.bmp")) {
     return WALL2;
+  }
+  else {
+    InvalidCodePath;
+    return 0;
+  }
+}
+
+int texNormStrToID(char* str) {
+  if(strcmpAny(str, "n_ceil1.bmp")) {
+    return N_CEIL1;
+  }
+  else if(strcmpAny(str, "n_city2_2.bmp")) {
+    return N_CITY2_2;
+  }
+  else if(strcmpAny(str, "n_city3_2.bmp")) {
+    return N_CITY3_2;
+  }
+  else if(strcmpAny(str, "n_city4_1.bmp")) {
+    return N_CITY4_1;
+  }
+  else if(strcmpAny(str, "n_floor1.bmp")) {
+    return N_FLOOR1;
+  }
+  else if(strcmpAny(str, "n_floor2.bmp")) {
+    return N_FLOOR2;
+  }
+  else if(strcmpAny(str, "n_floor3.bmp")) {
+    return N_FLOOR3;
+  }
+  else if(strcmpAny(str, "n_metalbox.bmp")) {
+    return N_METALBOX;
+  }
+  else if(strcmpAny(str, "n_wall1.bmp")) {
+    return N_WALL1;
+  }
+  else if(strcmpAny(str, "n_wall2.bmp")) {
+    return N_WALL2;
   }
   else {
     InvalidCodePath;
@@ -205,6 +243,12 @@ void Renderer::initialize() {
   glVertexAttribPointer(texCoord, 3, GL_FLOAT, GL_FALSE, sizeof(Vertpcnu), (void*)(sizeof(v3)*3));
   glEnableVertexAttribArray(texCoord);
 
+  textureLocation = glGetUniformLocation(shaderID, "textureData");
+  normTextureLocation = glGetUniformLocation(shaderID, "bumpMap");
+  glUseProgram(shaderID);
+  glUniform1i(textureLocation, 0);
+  glUniform1i(normTextureLocation, 1);
+
   #if DEBUG_BUILD
     compileShader(&debugShaderID, vertexSourceUBUF, debugWhiteFragmentSource);
     renderDebug = false;
@@ -221,171 +265,9 @@ void Renderer::initialize() {
   glEnable(GL_CULL_FACE);
 }
 
-/*
-void Mesh::addTri(Vertpcnu a, Vertpcnu b, Vertpcnu c) {
-  v3 normal;
-  v3 first = a.position - b.position;
-  v3 second = c.position - b.position;
-  normal = normalize(cross(second, first));
-  a.normal = normal;
-  b.normal = normal;
-  c.normal = normal;
-  int index = verts->size();
-  verts->push_back(a);
-  elements->push_back(index++);
-  verts->push_back(b);
-  elements->push_back(index++);
-  verts->push_back(c);
-  elements->push_back(index++);
-}
-
-void Mesh::addCube(v3 center, float width, v3 color) {
-  float widthOffset = width/2.0f;
-  Vertpcnu a, b, c, d;
-  v3 xOff, yOff, zOff;
-  xOff = V3(widthOffset, 0.0, 0.0);
-  yOff = V3(0.0, widthOffset, 0.0);
-  zOff = V3(0.0, 0.0, widthOffset);
-  
-  a.color = color;
-  b.color = color;
-  c.color = color;
-  d.color = color;
-
-  //top
-  a.uv = V3(0.0,1.0,0.0);
-  b.uv = V3(0.0, 0.0, 0.0);
-  c.uv = V3(1.0, 0.0, 0.0);
-  d.uv = V3(1.0, 1.0, 0.0);
-  a.position = (((center - zOff) + yOff) - xOff);
-  b.position = (((center + zOff) + yOff) - xOff);
-  c.position = (((center + zOff) + yOff) + xOff);
-  d.position = (((center - zOff) + yOff) + xOff);
-  addTri(a,b,d);
-  addTri(b,c,d);
-  //bottom
-  a.position = (((center + zOff) - yOff) - xOff);
-  b.position = (((center - zOff) - yOff) - xOff);
-  c.position = (((center - zOff) - yOff) + xOff);
-  d.position = (((center + zOff) - yOff) + xOff);
-  addTri(a,b,d);
-  addTri(b,c,d);
-  //front
-  a.position = (((center + zOff) + yOff) - xOff);
-  b.position = (((center + zOff) - yOff) - xOff);
-  c.position = (((center + zOff) - yOff) + xOff);
-  d.position = (((center + zOff) + yOff) + xOff);
-  addTri(a,b,d);
-  addTri(b,c,d);
-  //back
-  a.position = (((center - zOff) + yOff) + xOff);
-  b.position = (((center - zOff) - yOff) + xOff);
-  c.position = (((center - zOff) - yOff) - xOff);
-  d.position = (((center - zOff) + yOff) - xOff);
-  addTri(a,b,d);
-  addTri(b,c,d);
-  //left
-  a.position = (((center - zOff) + yOff) - xOff);
-  b.position = (((center - zOff) - yOff) - xOff);
-  c.position = (((center + zOff) - yOff) - xOff);
-  d.position = (((center + zOff) + yOff) - xOff);
-  addTri(a,b,d);
-  addTri(b,c,d);
-  //right
-  a.position = (((center + zOff) + yOff) + xOff);
-  b.position = (((center + zOff) - yOff) + xOff);
-  c.position = (((center - zOff) - yOff) + xOff);
-  d.position = (((center - zOff) + yOff) + xOff);
-  addTri(a,b,d);
-  addTri(b,c,d);
-}
-
-void Mesh::addQuad(v3 vert1, v3 vert2, v3 vert3, v3 vert4, v3 color) {
-  Vertpcnu a, b, c, d;
-  a.position = vert1;
-  a.uv = V3(0.0, 0.0, 0.0);
-  b.position = vert2;
-  b.uv = V3(0.0, 1.0, 0.0);
-  c.position = vert3;
-  c.uv = V3(1.0, 1.0, 0.0);
-  d.position = vert4;
-  d.uv = V3(1.0, 0.0, 0.0);
-  a.color = color;
-  b.color = color;
-  c.color = color;
-  d.color = color;
-  addTri(a,b,c);
-  addTri(c,d,a);
-}
-
-void Mesh::addQuad(v3 vert1, v3 vert2, v3 vert3, v3 vert4, v3 color, LevelGeometry* level) {
-  Vertpcnu a, b, c, d;
-  a.position = vert1;
-  a.uv = V3(0.0, 0.0, 0.0);
-  b.position = vert2;
-  b.uv = V3(0.0, 1.0, 0.0);
-  c.position = vert3;
-  c.uv = V3(1.0, 1.0, 0.0);
-  d.position = vert4;
-  d.uv = V3(1.0, 0.0, 0.0);
-  a.color = color;
-  b.color = color;
-  c.color = color;
-  d.color = color;
-  addTri(a,b,c);
-  addTri(c,d,a);
-  v3 center = .5*(a.position - c.position) + c.position;
-  v3 rad;
-  //note: currently assuming axis-aligned, either wall or floor
-  if(a.position.y == b.position.y) {//floor or ceiling
-    rad.x = magnitude(a.position - b.position)/2.0;
-    rad.y = 0.2;
-    rad.z = magnitude(b.position - c.position)/2.0;
-  }
-  else {
-    rad.x = max(0.2, 1.05*(abs(b.position.x - c.position.x)/2.0));
-    rad.y = 1.05*(abs(b.position.y - a.position.y) / 2.0);
-    rad.z = max(0.2, (abs(b.position.z - a.position.z)/2.0));
-  }
-  level->addAABB(center, rad);
-}
-
-void Mesh::addCircle(v3 cirCenter, float rad, float numPts) {
-  Vertpcnu oldVert, newVert, center;
-  v3 normal = V3(0.0,0.1,0.0);
-  oldVert.normal = normal;
-  newVert.normal = normal;
-  center.normal = normal;
-  center.position = cirCenter;
-  center.uv = V3(.5, .5, 0.0);
-  int centerIndex = elements->size();
-  int index = centerIndex+1;
-  float aCos = cos(0.0f);
-  float aSin = sin(0.0f);
-  float rot = 2*M_PI/numPts;
-  oldVert.uv = V3((aCos + 1) / 2, (aSin + 1) / 2, 0.0);
-  oldVert.position = V3(aCos*rad, center.position.y, aSin*rad);
-
-  verts->push_back(center);
-  verts->push_back(oldVert);
-  for(float i = 1.0; i <= numPts; i++) {
-    float bCos = cos((i)*rot);
-    float bSin = sin((i)*rot);
-    
-    newVert.uv = V3((bCos + 1) / 2, (bSin + 1) / 2, 0.0);
-    newVert.position = V3(bCos*rad, center.position.y, bSin*rad);
-    verts->push_back(newVert);
-    
-    elements->push_back(centerIndex);
-    elements->push_back(index+1);
-    elements->push_back(index);
-    index += 1;
-  }
-}
-*/
-
 
 void Renderer::draw() {
+  glUseProgram(shaderID);
   //glEnable(GL_FRAMEBUFFER_SRGB); 
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
@@ -401,8 +283,13 @@ void Renderer::draw() {
   GLint texCoord = glGetAttribLocation(shaderID, "texCoordIn");
   glVertexAttribPointer(texCoord, 3, GL_FLOAT, GL_FALSE, sizeof(Vertpcnu), (void*)(sizeof(v3)*3));
   glEnableVertexAttribArray(texCoord);
-  glDrawElements(GL_TRIANGLES, levelElements.size(), GL_UNSIGNED_INT, 0);
 
+  glActiveTexture(GL_TEXTURE0 + 0); 
+  glBindTexture(GL_TEXTURE_2D_ARRAY, texTable[1].glTextureNum);
+  glActiveTexture(GL_TEXTURE0 + 1); 
+  glBindTexture(GL_TEXTURE_2D_ARRAY, texNormTable[1].glTextureNum);
+  
+  glDrawElements(GL_TRIANGLES, levelElements.size(), GL_UNSIGNED_INT, 0);
   #if DEBUG_BUILD
     if(renderDebug){
       glUseProgram(debugShaderID);
@@ -560,16 +447,6 @@ void loadTextureIntoArray(char* bmpPath, TextureHandle* th, int width, int heigh
 }
 
 GLuint Renderer::createTextureArrayBuffer(int width, int height) {
-  /*
-  GLint maxTexDim, maxTexLayers, maxTexUnits;
-  glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTexDim);
-  glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &maxTexLayers);
-  glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &maxTexUnits);
-  int layerCount = maxTexDim/4/texDim;
-  //TODO: this probably wrong??? maxIndex/4 != maxBytes????
-  assert(maxTexDim/4 >= 2048);
-  assert(maxTexUnits >= 32); //Note: we know that this is just for the frag shader
-*/
   assert(width == height);
   int layerCount = 2048/height;
   GLuint texID;
@@ -583,7 +460,7 @@ GLuint Renderer::createTextureArrayBuffer(int width, int height) {
   return texID;
 }
 
-void Renderer::loadTextureArray512(int aID, char* aPath, int bID, char* bPath, int cID, char* cPath, int dID, char* dPath){
+void Renderer::loadTextureArray512(TextureHandle texTable[],int aID, char* aPath, int bID, char* bPath, int cID, char* cPath, int dID, char* dPath){
   GLuint texID = createTextureArrayBuffer(512,512);
   Bitmap aBMP, bBMP, cBMP, dBMP;
   int cpyOffset = 512*512*4;
@@ -629,6 +506,11 @@ void Renderer::loadTextureArray512(int aID, char* aPath, int bID, char* bPath, i
 
 TextureHandle Renderer::getGLTexID(int texID) {
   TextureHandle th = texTable[texID];
+  return th;
+}
+
+TextureHandle Renderer::getGLNormTexID(int texID) {
+  TextureHandle th = texNormTable[texID];
   return th;
 }
 

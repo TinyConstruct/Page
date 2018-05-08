@@ -57,7 +57,7 @@ public:
   void bakeTestLevel();
   void finalizeQuads();
   void loadLevelFromTextFile(char* path);
-  void preLoadTextureArray512(int numTexes, char* tex1, char* tex2, char* tex3, char* tex4);
+  void preLoadTextureArray512(int numTexes, char* tex1, char* tex2, char* tex3, char* tex4, bool hasNormalMap);
   TexturedQuad processQuadTextLine(char* str);
   char* processQuadTextLine(char* str, TexturedQuad* q);
   char* processQuadTripple(char* str, v3* v);
