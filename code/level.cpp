@@ -62,7 +62,6 @@ void LevelData::addTexturedQuad(v3& vert1, v3& vert2, v3& vert3, v3& vert4, int 
 
 void LevelData::finalizeQuads() {
   for(size_t i = 0; i < quads->size(); i++){
-
   //add rendering information: 
     Vertpcnu a, b, c, d;
     v2 uvScale = (*quads)[i].texScale;
@@ -78,6 +77,8 @@ void LevelData::finalizeQuads() {
     renderer->addTri(c, d, a);
     v3 center = .5f*(a.position - c.position) + c.position;
     v3 rad;
+
+    renderer->addDebugVolume(V3(0.6,0.5,2.5), V3(.1,.1,.1));
 
   //add collision geometry:
     //if axis aligned:

@@ -12,6 +12,8 @@ struct Vertpcnu {
   v3 color;
   v3 normal;
   v3 uv;
+  v3 tangent;
+  v3 bitangent;
 };
 
 struct Texture {

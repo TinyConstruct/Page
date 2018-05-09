@@ -20,23 +20,33 @@ layout (location = 0) in vec3 position;
 layout (location = 1) in vec3 color;
 layout (location = 2) in vec3 normal;
 layout (location = 3) in vec3 texCoordIn;
+layout (location = 4) in vec3 tangentIn;
+layout (location = 5) in vec3 bitangentIn;
 layout(std140) uniform GlobalMatrices {
   mat4 view;
   mat4 projection;
   vec3 playerPos;
 };
-out vec3 colorOutFromVert;
-out vec3 normalOutFromVert;
 out vec3 fragPos;
 out vec3 texCoordOutFromVert;
+out vec3 tangentLightPos;
+out vec3 tangentViewPos;
+out vec3 tangentFragPos;
 
 void main()
 {
   gl_Position =  projection * view * vec4(position.x, position.y, position.z, 1.0f);
   fragPos = position.xyz;
-  colorOutFromVert = color;
-  normalOutFromVert = normal;
   texCoordOutFromVert = texCoordIn;
+  
+  vec3 T = normalize(tangentIn);
+  vec3 B = normalize(bitangentIn);
+  vec3 N = normalize(normal);
+  mat3 TBN = transpose(mat3(T, B, N));
+  tangentLightPos = TBN * vec3(4.0,.5,0.0);
+  tangentViewPos = TBN * playerPos;
+  tangentFragPos = TBN * fragPos;
+  
 }
 )FOO";
 
@@ -44,10 +54,11 @@ const char* fragmentSource = R"FOO(
 #version 450 core
 uniform sampler2DArray textureData;
 uniform sampler2DArray bumpMap;
-in vec3 colorOutFromVert;
-in vec3 normalOutFromVert;
 in vec3 fragPos;
 in vec3 texCoordOutFromVert;
+in vec3 tangentLightPos;
+in vec3 tangentViewPos;
+in vec3 tangentFragPos;
 layout(std140) uniform GlobalMatrices {
   mat4 view;
   mat4 projection;
@@ -56,23 +67,27 @@ layout(std140) uniform GlobalMatrices {
 out vec4 resultColor;
 void main()
 {
-  vec3 lightPos = playerPos;
-  vec4 texColor = texture(textureData, vec3(texCoordOutFromVert.xyz));
+  vec3 lightcolor = vec3(1.0,1.0,1.0);
+  vec3 normal = texture(bumpMap, texCoordOutFromVert.xyz).rgb;
+  normal = normalize(normal * 2.0 - 1.0);
+
+  vec3 texColor = texture(textureData, vec3(texCoordOutFromVert.xyz)).rgb;
   vec3 lightColor = vec3(1.0,1.0,1.0);
+//ambient
   float ambientIntensity= .1;
-  float specularIntensity = 1.0;
-  vec3 viewerDir = normalize(playerPos - fragPos);
-  vec3 lightDir = normalize(lightPos - fragPos);
-  vec3 norm = normalize(normalOutFromVert);
-  vec3 reflectedDir = reflect(-lightDir, norm);
+  vec3 ambient = ambientIntensity*texColor;
+//diffuse  
+  vec3 lightDir = normalize(tangentLightPos - tangentFragPos);
+  float diff = max(dot(normal, lightDir), 0.0);
+  vec3 diffuse = diff * texColor;
+//specular
+  vec3 viewerDir = normalize(tangentViewPos - tangentFragPos);
+  vec3 reflectedDir = reflect(-lightDir, normal);
+  vec3 halfwayDir = normalize(lightDir + viewerDir);  
+  float specularIntensity = pow(max(dot(normal, halfwayDir), 0.0), 32.0);
+  vec3 specular = vec3(0.2) * specularIntensity;
 
-  float spec = pow(max(dot(viewerDir, reflectedDir), 0.0), 32);
-
-  float diff = max(dot(norm, lightDir), 0.0);
-  vec3 ambient = lightColor*ambientIntensity;
-  vec3 diffuse = diff * lightColor;
-  vec3 specular = specularIntensity * spec * lightColor;  
-  resultColor = (vec4((ambient + diffuse + specular), 1.0) * vec4(texColor.rgb, 1.0));
+  resultColor = vec4((ambient + diffuse + specular)*lightcolor, 1.0);
 }
 )FOO";
 
@@ -283,6 +298,12 @@ void Renderer::draw() {
   GLint texCoord = glGetAttribLocation(shaderID, "texCoordIn");
   glVertexAttribPointer(texCoord, 3, GL_FLOAT, GL_FALSE, sizeof(Vertpcnu), (void*)(sizeof(v3)*3));
   glEnableVertexAttribArray(texCoord);
+  GLint tangent = glGetAttribLocation(shaderID, "tangentIn");
+  glVertexAttribPointer(tangent, 3, GL_FLOAT, GL_FALSE, sizeof(Vertpcnu), (void*)(sizeof(v3)*4));
+  glEnableVertexAttribArray(tangent);
+  GLint bitangent = glGetAttribLocation(shaderID, "bitangentIn");
+  glVertexAttribPointer(bitangent, 3, GL_FLOAT, GL_FALSE, sizeof(Vertpcnu), (void*)(sizeof(v3)*5));
+  glEnableVertexAttribArray(bitangent);
 
   glActiveTexture(GL_TEXTURE0 + 0); 
   glBindTexture(GL_TEXTURE_2D_ARRAY, texTable[1].glTextureNum);
@@ -522,6 +543,45 @@ void Renderer::addTri(Vertpcnu& a, Vertpcnu& b, Vertpcnu& c) {
   a.normal = normal;
   b.normal = normal;
   c.normal = normal;
+  v3 deltaPos1 = b.position-a.position;
+  v3 deltaPos2 = c.position-a.position;
+  v2 deltaUV1, deltaUV2;
+  deltaUV1.x = b.uv.x-a.uv.x;
+  deltaUV1.y = b.uv.y-a.uv.y;
+  deltaUV2.x = c.uv.x-a.uv.x;
+  deltaUV2.y = c.uv.y-a.uv.y;
+
+  float r = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x);
+  v3 tangent = r*(deltaUV2.y * deltaPos1 - deltaUV1.y * deltaPos2);
+  //tangent.x = r * (deltaUV2.y * first.x - deltaUV1.y * second.x);
+  //tangent.y = r * (deltaUV2.y * first.y - deltaUV1.y * second.y);
+  //tangent.z = r * (deltaUV2.y * first.z - deltaUV1.y * second.z);
+  tangent = normalize(tangent);
+  v3 bitangent = r*(deltaUV1.x * deltaPos2 - deltaUV2.x * deltaPos1);
+  //bitangent.x = r * (-deltaUV2.x * first.x + deltaUV1.x * second.x);
+  //bitangent.y = r * (-deltaUV2.x * first.y + deltaUV1.x * second.y);
+  //bitangent.z = r * (-deltaUV2.x * first.z + deltaUV1.x * second.z);
+  bitangent = normalize(bitangent);
+
+  a.tangent = tangent;
+  a.bitangent = bitangent;
+  b.tangent = tangent;
+  b.bitangent = bitangent;
+  c.tangent = tangent;
+  c.bitangent = bitangent;
+
+  debugDrawLine(a.position, a.position + .5*a.normal);
+  debugDrawLine(a.position, a.position + .5*a.tangent);
+  debugDrawLine(a.position, a.position + .5*a.bitangent);
+
+  debugDrawLine(b.position, b.position + .5*b.normal);
+  debugDrawLine(b.position, b.position + .5*b.tangent);
+  debugDrawLine(b.position, b.position + .5*b.bitangent);
+
+  debugDrawLine(c.position, c.position + .5*c.normal);
+  debugDrawLine(c.position, c.position + .5*c.tangent);
+  debugDrawLine(c.position, c.position + .5*c.bitangent);
+
   int index = levelElements.size();
   level.push_back(a);
   levelElements.push_back(index++);

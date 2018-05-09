@@ -232,14 +232,14 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
       levelGeo.initialize();
 
       levelData.bakeTestLevel();
-
+      /*
       for(size_t i = 0; i < levelGeo.AABBs.size(); i++) {
         renderer.addDebugVolume(levelGeo.AABBs[i].center, levelGeo.AABBs[i].rad);
       }
       for (size_t i = 0; i < levelGeo.OBBs.size(); i++) {
         renderer.addDebugVolume(levelGeo.OBBs[i].c, levelGeo.OBBs[i].u, levelGeo.OBBs[i].width);
       }
-
+      */
 
       renderer.initialize();
       keyboardState.initialize();
@@ -339,7 +339,9 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
         //QueryPerformanceCounter(&beginProfGL);
         SwapBuffers(dc);
         //QueryPerformanceCounter(&endProfGL);
-        
+        char buffer[512];
+        sprintf_s(buffer, "time since stutter: %f, %f, %f\n", player.center.x, player.center.y, player.center.z);
+        OutputDebugStringA(buffer);
         
         /*
         long long swapdif = endProfGL.QuadPart - beginProfGL.QuadPart;
