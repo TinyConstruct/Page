@@ -38,13 +38,17 @@ public:
   #if DEBUG_BUILD
     bool renderDebug;
     GLuint debugVbo, debugEbo, debugShaderID;
+    GLuint debugPlayerVbo, debugPlayerEbo;
     std::vector<v3> debugBoundingVerts;
     std::vector<int> debugBoundingElements;
+    std::vector<v3> debugPlayerVerts = std::vector<v3>(8);
+    std::vector<int> debugPlayerElements;
   #endif
     
   void initialize();
   void draw();
   void addDebugVolume(const v3& center, const v3& rad);
+  void addPlayerDebugVolume(v3& center, v3 axes[3], v3& halfW);
   void loadTextureIntoArray(char* bmpPath, int width, int height);
   GLuint createTextureArrayBuffer(int width, int height);
   void loadTextureArray512(TextureHandle texTable[], int a, char* aPath, int b, char* bPath, int c, char* cPath, int d, char* dPath);

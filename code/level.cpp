@@ -17,7 +17,6 @@ void LevelGeometry::addAABB(v3& center, v3& rad) {
 }
 
 void LevelGeometry::initialize() {
-  
 }
 
 void LevelGeometry::addOOB(v3& center, v3 axes[3], v3& halfW) {
@@ -454,7 +453,6 @@ void LevelGeometry::movePlayer(Player& player, KeyboardState& keyboardState, flo
     
   //create player collision geometry
   static AABB playerAABB;
-  static OBB playerOBB;
   movementDir = normalize(movementDir);
   playerAABB.center.x = player.center.x + (playerWalkingSpeed * lastFrameSec * movementDir.x);
   playerAABB.center.y = player.center.y + (playerWalkingSpeed * lastFrameSec * movementDir.y);

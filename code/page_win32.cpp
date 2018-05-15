@@ -232,14 +232,12 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
       levelGeo.initialize();
 
       levelData.bakeTestLevel();
-      /*
       for(size_t i = 0; i < levelGeo.AABBs.size(); i++) {
         renderer.addDebugVolume(levelGeo.AABBs[i].center, levelGeo.AABBs[i].rad);
       }
       for (size_t i = 0; i < levelGeo.OBBs.size(); i++) {
         renderer.addDebugVolume(levelGeo.OBBs[i].c, levelGeo.OBBs[i].u, levelGeo.OBBs[i].width);
       }
-      */
 
       renderer.initialize();
       keyboardState.initialize();
@@ -295,6 +293,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
           if(keyboardState.cameraLock){
             QueryPerformanceCounter(&beginProfMove);
             levelGeo.movePlayer(player, keyboardState, pitchDif, yRotationDif, lastFrameSec);
+            renderer.addPlayerDebugVolume(levelGeo.playerOBB.c, levelGeo.playerOBB.u, levelGeo.playerOBB.width);
             playerCamera.center = player.center;
             QueryPerformanceCounter(&endProfMove);
 

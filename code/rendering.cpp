@@ -265,6 +265,30 @@ void Renderer::initialize() {
   glUniform1i(normTextureLocation, 1);
 
   #if DEBUG_BUILD
+    debugPlayerElements.push_back(0);
+    debugPlayerElements.push_back(1);
+    debugPlayerElements.push_back(1);
+    debugPlayerElements.push_back(2);
+    debugPlayerElements.push_back(2);
+    debugPlayerElements.push_back(3);
+    debugPlayerElements.push_back(3);
+    debugPlayerElements.push_back(0);
+    debugPlayerElements.push_back(4);
+    debugPlayerElements.push_back(5);
+    debugPlayerElements.push_back(5);
+    debugPlayerElements.push_back(6);
+    debugPlayerElements.push_back(6);
+    debugPlayerElements.push_back(7);
+    debugPlayerElements.push_back(7);
+    debugPlayerElements.push_back(4);
+    debugPlayerElements.push_back(4);
+    debugPlayerElements.push_back(0);
+    debugPlayerElements.push_back(7);
+    debugPlayerElements.push_back(3);
+    debugPlayerElements.push_back(5);
+    debugPlayerElements.push_back(1);
+    debugPlayerElements.push_back(6);
+    debugPlayerElements.push_back(2);
     compileShader(&debugShaderID, vertexSourceUBUF, debugWhiteFragmentSource);
     renderDebug = false;
     glGenBuffers(1, &debugVbo);
@@ -273,6 +297,13 @@ void Renderer::initialize() {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, debugEbo);
     glBufferData(GL_ARRAY_BUFFER, debugBoundingVerts.size()*sizeof(v3), debugBoundingVerts.data(), GL_DYNAMIC_DRAW);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, debugBoundingElements.size()*sizeof(int), debugBoundingElements.data(), GL_DYNAMIC_DRAW);
+
+    glGenBuffers(1, &debugPlayerVbo);
+    glGenBuffers(1, &debugPlayerEbo);
+    glBindBuffer(GL_ARRAY_BUFFER, debugPlayerVbo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, debugPlayerEbo);
+    glBufferData(GL_ARRAY_BUFFER, debugPlayerVerts.size()*sizeof(v3), debugPlayerVerts.data(), GL_DYNAMIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, debugPlayerElements.size()*sizeof(int), debugPlayerElements.data(), GL_DYNAMIC_DRAW);
   #endif
   
   glEnable(GL_DEPTH_TEST);
@@ -316,7 +347,15 @@ void Renderer::draw() {
       glUseProgram(debugShaderID);
       glBindBuffer(GL_ARRAY_BUFFER, debugVbo);
       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, debugEbo);
-      posAttrib = glGetAttribLocation(shaderID, "position");
+      posAttrib = glGetAttribLocation(debugShaderID, "position");
+      glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(v3), 0);
+      glEnableVertexAttribArray(posAttrib);
+      glDrawElements(GL_LINES, debugBoundingElements.size(), GL_UNSIGNED_INT, 0);
+
+      glBindBuffer(GL_ARRAY_BUFFER, debugPlayerVbo);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, debugPlayerEbo);
+      glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(v3)*debugPlayerVerts.size(), debugPlayerVerts.data());
+      posAttrib = glGetAttribLocation(debugShaderID, "position");
       glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(v3), 0);
       glEnableVertexAttribArray(posAttrib);
       glDrawElements(GL_LINES, debugBoundingElements.size(), GL_UNSIGNED_INT, 0);
@@ -439,6 +478,38 @@ void Renderer::addDebugVolume(v3& center, v3 axes[3], v3& halfW) {
   debugBoundingElements.push_back(startingIndex+2);  
 }
 
+void Renderer::addPlayerDebugVolume(v3& center, v3 axes[3], v3& halfW) {
+  v3 newVert, offset;
+  int startingIndex = 0;
+  offset = halfW;
+  //front plane
+  //newVert = V3(center.x - offset.x, center.y + offset.y, center.z + offset.z);//0
+  newVert = center - halfW.x*axes[0] + halfW.y*axes[1] + halfW.z*axes[2];
+  debugPlayerVerts[0] = newVert;
+  //newVert = V3(center.x - offset.x, center.y - offset.y, center.z + offset.z);//1
+  newVert = center - halfW.x*axes[0] - halfW.y*axes[1] + halfW.z*axes[2];
+  debugPlayerVerts[1] = newVert;
+  //newVert = V3(center.x + offset.x, center.y - offset.y, center.z + offset.z);//2
+  newVert = center + halfW.x*axes[0] - halfW.y*axes[1] + halfW.z*axes[2];
+  debugPlayerVerts[2] = newVert;
+  //newVert = V3(center.x + offset.x, center.y + offset.y, center.z + offset.z);//3
+  newVert = center + halfW.x*axes[0] + halfW.y*axes[1] + halfW.z*axes[2];
+  debugPlayerVerts[3] = newVert;
+  //back plane
+  //newVert = V3(center.x - offset.x, center.y + offset.y, center.z - offset.z);//4
+  newVert = center - halfW.x*axes[0] + halfW.y*axes[1] - halfW.z*axes[2];
+  debugPlayerVerts[4] = newVert;
+  //newVert = V3(center.x - offset.x, center.y - offset.y, center.z - offset.z);//5
+  newVert = center - halfW.x*axes[0] - halfW.y*axes[1] - halfW.z*axes[2];
+  debugPlayerVerts[5] = newVert;
+  //newVert = V3(center.x + offset.x, center.y - offset.y, center.z - offset.z);//6
+  newVert = center + halfW.x*axes[0] - halfW.y*axes[1] - halfW.z*axes[2];
+  debugPlayerVerts[6] = newVert;
+  //newVert = V3(center.x + offset.x, center.y + offset.y, center.z - offset.z);//7
+  newVert = center + halfW.x*axes[0] + halfW.y*axes[1] - halfW.z*axes[2];
+  debugPlayerVerts[7] = newVert;
+}
+
 GLuint loadTexture(Texture* texture, char* bmpPath) {
   GLuint texID;
   glGenTextures(1, &texID);
@@ -553,14 +624,8 @@ void Renderer::addTri(Vertpcnu& a, Vertpcnu& b, Vertpcnu& c) {
 
   float r = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x);
   v3 tangent = r*(deltaUV2.y * deltaPos1 - deltaUV1.y * deltaPos2);
-  //tangent.x = r * (deltaUV2.y * first.x - deltaUV1.y * second.x);
-  //tangent.y = r * (deltaUV2.y * first.y - deltaUV1.y * second.y);
-  //tangent.z = r * (deltaUV2.y * first.z - deltaUV1.y * second.z);
   tangent = normalize(tangent);
   v3 bitangent = r*(deltaUV1.x * deltaPos2 - deltaUV2.x * deltaPos1);
-  //bitangent.x = r * (-deltaUV2.x * first.x + deltaUV1.x * second.x);
-  //bitangent.y = r * (-deltaUV2.x * first.y + deltaUV1.x * second.y);
-  //bitangent.z = r * (-deltaUV2.x * first.z + deltaUV1.x * second.z);
   bitangent = normalize(bitangent);
 
   a.tangent = tangent;
@@ -570,17 +635,15 @@ void Renderer::addTri(Vertpcnu& a, Vertpcnu& b, Vertpcnu& c) {
   c.tangent = tangent;
   c.bitangent = bitangent;
 
-  debugDrawLine(a.position, a.position + .5*a.normal);
-  debugDrawLine(a.position, a.position + .5*a.tangent);
-  debugDrawLine(a.position, a.position + .5*a.bitangent);
-
-  debugDrawLine(b.position, b.position + .5*b.normal);
-  debugDrawLine(b.position, b.position + .5*b.tangent);
-  debugDrawLine(b.position, b.position + .5*b.bitangent);
-
-  debugDrawLine(c.position, c.position + .5*c.normal);
-  debugDrawLine(c.position, c.position + .5*c.tangent);
-  debugDrawLine(c.position, c.position + .5*c.bitangent);
+  //debugDrawLine(a.position, a.position + .5*a.normal);
+  //debugDrawLine(a.position, a.position + .5*a.tangent);
+  //debugDrawLine(a.position, a.position + .5*a.bitangent);
+  //debugDrawLine(b.position, b.position + .5*b.normal);
+  //debugDrawLine(b.position, b.position + .5*b.tangent);
+  //debugDrawLine(b.position, b.position + .5*b.bitangent);
+  //debugDrawLine(c.position, c.position + .5*c.normal);
+  //debugDrawLine(c.position, c.position + .5*c.tangent);
+  //debugDrawLine(c.position, c.position + .5*c.bitangent);
 
   int index = levelElements.size();
   level.push_back(a);

@@ -21,6 +21,7 @@ class LevelGeometry {
 public:
   std::vector<AABB> AABBs;
   std::vector<OBB> OBBs;
+  OBB playerOBB;
   
   void addAABB(v3& center, v3& rad);
   void addOOB(v3& center, v3 axes[3], v3& halfW);
