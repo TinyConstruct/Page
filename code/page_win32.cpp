@@ -31,7 +31,6 @@ static LevelGeometry levelGeo;
 static LevelData levelData;
 static Renderer renderer;
 static KeyboardState keyboardState;
-static Camera playerCamera;
 static Camera freeCamera;
 
 LRESULT CALLBACK
@@ -73,6 +72,10 @@ win32MainWindowCallback(HWND window, UINT message, WPARAM WParam, LPARAM LParam)
       break;
       case 'C': {
         keyboardState.cameraLock = !keyboardState.cameraLock;
+        freeCamera.center = player.center;
+        freeCamera.yRotation = player.yRotation;
+        freeCamera.pitch = player.pitch;
+        freeCamera.viewDir = player.viewDir;
       }
       break;
       case VK_ESCAPE: {
@@ -283,23 +286,26 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
         }
         QueryPerformanceCounter(&endProfMsg);
         
-
+        //These are local in order to support multiple cameras
+        v3 cameraPosition, viewDir;
         if(!keyboardState.pause){
         //get mouse and keyboard movement if not paused
-          GetCursorPos(&mousePoint);
-          float yRotationDif = (mousePoint.x - globalWindowLocation.centerX)*mouseLookDampen;
-          float pitchDif = -(mousePoint.y - globalWindowLocation.centerY)*mouseLookDampen;
-          SetCursorPos(globalWindowLocation.centerX, globalWindowLocation.centerY);
-          if(keyboardState.cameraLock){
+        GetCursorPos(&mousePoint);
+        float yRotationDif = (mousePoint.x - globalWindowLocation.centerX)*mouseLookDampen;
+        float pitchDif = -(mousePoint.y - globalWindowLocation.centerY)*mouseLookDampen;
+        SetCursorPos(globalWindowLocation.centerX, globalWindowLocation.centerY);
+          if(keyboardState.cameraLock) { //camera is locked to player
             QueryPerformanceCounter(&beginProfMove);
             levelGeo.movePlayer(player, keyboardState, pitchDif, yRotationDif, lastFrameSec);
             renderer.addPlayerDebugVolume(levelGeo.playerOBB.c, levelGeo.playerOBB.u, levelGeo.playerOBB.width);
-            playerCamera.center = player.center;
             QueryPerformanceCounter(&endProfMove);
-
+            cameraPosition = V3(player.center.x, player.center.y, player.center.z) + playerOffset;
+            viewDir = player.viewDir;
           }
-          else {
+          else { //currently using free cam
             levelGeo.moveFreeCam(freeCamera, keyboardState, pitchDif, yRotationDif, lastFrameSec);
+            cameraPosition = freeCamera.center;
+            viewDir = freeCamera.viewDir;
           }
         }
         else {
@@ -310,17 +316,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
         glClearColor(1.0,0.0,1.0,1.0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         wglSwapInterval(1);
-
-        v3 cameraPosition, viewDir;
-        if (keyboardState.cameraLock) {
-          cameraPosition = V3(player.center.x, player.center.y, player.center.z) + playerOffset;
-          viewDir = player.viewDir;
-        }
-        else {
-          cameraPosition = freeCamera.center;
-          viewDir = freeCamera.viewDir;
-        }
-        
+       
 
 
         m4x4 viewMat = aroLookat(cameraPosition, cameraPosition + viewDir);
@@ -339,7 +335,9 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
         SwapBuffers(dc);
         //QueryPerformanceCounter(&endProfGL);
         char buffer[512];
-        sprintf_s(buffer, "time since stutter: %f, %f, %f\n", player.center.x, player.center.y, player.center.z);
+        sprintf_s(buffer, "View bottom: %f, %f, %f\n", viewDir.x, viewDir.y, viewDir.z);
+        OutputDebugStringA(buffer);
+        sprintf_s(buffer, "Player view bottom: %f, %f, %f\n", player.viewDir.x, player.viewDir.y, player.viewDir.z);
         OutputDebugStringA(buffer);
         
         /*
