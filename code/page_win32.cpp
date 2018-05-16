@@ -317,8 +317,6 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         wglSwapInterval(1);
        
-
-
         m4x4 viewMat = aroLookat(cameraPosition, cameraPosition + viewDir);
         glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(m4x4), viewMat.n);
 
@@ -335,10 +333,9 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
         SwapBuffers(dc);
         //QueryPerformanceCounter(&endProfGL);
         char buffer[512];
-        sprintf_s(buffer, "View bottom: %f, %f, %f\n", viewDir.x, viewDir.y, viewDir.z);
+        sprintf_s(buffer, "Player: %f, %f, %f\n", player.center.x, player.center.y, player.center.z);
         OutputDebugStringA(buffer);
-        sprintf_s(buffer, "Player view bottom: %f, %f, %f\n", player.viewDir.x, player.viewDir.y, player.viewDir.z);
-        OutputDebugStringA(buffer);
+        
         
         /*
         long long swapdif = endProfGL.QuadPart - beginProfGL.QuadPart;

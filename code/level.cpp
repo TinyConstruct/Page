@@ -77,8 +77,6 @@ void LevelData::finalizeQuads() {
     v3 center = .5f*(a.position - c.position) + c.position;
     v3 rad;
 
-    renderer->addDebugVolume(V3(0.6,0.5,2.5), V3(.1,.1,.1));
-
   //add collision geometry:
     //if axis aligned:
     if( ((a.position.x == b.position.x) && (b.position.x == c.position.x) &&
@@ -102,17 +100,19 @@ void LevelData::finalizeQuads() {
     //if not axis aligned, create a bounding box along local axes
     else {
       v3 axes[3];
+
+      
       v3 dir1, dir2;
       dir1 = d.position - a.position;
       dir2 = a.position - b.position;
 
       axes[0] = normalize(dir1);
       axes[1] = normalize(dir2);
-      axes[2] = cross(axes[0], axes[1]);
+      axes[2] = a.normal;
 
-      //renderer->debugDrawLine(center, center + 20*rad.x*axes[0]);
-      //renderer->debugDrawLine(center, center + 20*rad.y*axes[1]);
-      //renderer->debugDrawLine(center, center + 20*rad.z*axes[2]);
+      //renderer->debugDrawLine(center, center + 3*axes[0]);
+      //renderer->debugDrawLine(center, center + 3*axes[1]);
+      renderer->debugDrawLine(center, center + 3*axes[2]);
 
       rad.x = magnitude(dir1)*1.1f/2.0f;
       rad.y = magnitude(dir2)*1.1f/2.0f;
