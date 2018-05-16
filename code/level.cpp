@@ -460,7 +460,7 @@ void LevelGeometry::movePlayer(Player& player, KeyboardState& keyboardState, flo
   playerAABB.rad = V3(.125,.125,.125);
   playerOBB.c = playerAABB.center;
   playerOBB.u[0] = player.viewDir;
-  playerOBB.u[1] = V3(0.0f,1.0f,0.0f);
+  playerOBB.u[1] = upDir;
   playerOBB.u[2] = side;
   playerOBB.width = V3(.125,.125,.125);
   bool noCols = true;
