@@ -45,6 +45,7 @@ void LevelData::addTexturedQuad(v3& vert1, v3& vert2, v3& vert3, v3& vert4, int 
   q.texHandle = renderer->getGLTexID(texID);
   quads->push_back(q);
 }
+
 void LevelData::addTexturedQuad(TexturedQuad& q) {
   quads->push_back(q);
 }
@@ -112,7 +113,7 @@ void LevelData::finalizeQuads() {
 
       //renderer->debugDrawLine(center, center + 3*axes[0]);
       //renderer->debugDrawLine(center, center + 3*axes[1]);
-      renderer->debugDrawLine(center, center + 3*axes[2]);
+      //renderer->debugDrawLine(center, center + 3*axes[2]);
 
       rad.x = magnitude(dir1)*1.1f/2.0f;
       rad.y = magnitude(dir2)*1.1f/2.0f;
@@ -458,11 +459,13 @@ void LevelGeometry::movePlayer(Player& player, KeyboardState& keyboardState, flo
   playerAABB.center.y = player.center.y + (playerWalkingSpeed * lastFrameSec * movementDir.y);
   playerAABB.center.z = player.center.z + (playerWalkingSpeed * lastFrameSec * movementDir.z);
   playerAABB.rad = V3(.125,.125,.125);
+
+  //TODO: it's probably silly to also make an OBB for the player. If we use a capsule, AABB for coarse checking is probably fine. 
   playerOBB.c = playerAABB.center;
-  playerOBB.u[0] = player.viewDir;
-  playerOBB.u[1] = upDir;
-  playerOBB.u[2] = side;
-  playerOBB.width = V3(.125,.125,.125);
+  playerOBB.u[0] = normalize(V3(player.viewDir.x, 0.0f,player.viewDir.z));
+  playerOBB.u[1] = V3(0.0f,1.0f,0.0f);
+  playerOBB.u[2] = cross(playerOBB.u[0], playerOBB.u[1]);
+  playerOBB.width = V3(player.radius,player.halfHeight,player.radius);
   bool noCols = true;
 
   for(size_t i = 0; i < AABBs.size(); i++) {

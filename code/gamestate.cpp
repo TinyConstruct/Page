@@ -30,5 +30,7 @@ void Player::initialize() {
   joggingSpeed = 2.6f;
   walkingSpeed = 1.3f;
   sprintSpeed = 7.10f;
+  halfHeight = .835; //full height == 5'5"
+  radius = .25; //half a meter == 20 inches
 }
 

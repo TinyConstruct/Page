@@ -23,7 +23,6 @@
 #include "page_win32.h"
 
 static bool globalRunning;
-static Win32WindowDimensions globalWindowDimensions;
 static Win32WindowLocation globalWindowLocation;
 static Player player;
 const float playerDistPerSec = .25;
@@ -148,25 +147,25 @@ win32MainWindowCallback(HWND window, UINT message, WPARAM WParam, LPARAM LParam)
         globalRunning = false;
       } break;
       case WM_SIZE: {
-        renderer.aspectRatio = (float)globalWindowDimensions.width / (float) globalWindowDimensions.height;
+        renderer.aspectRatio = (float)renderer.windowDimensions.width / (float) renderer.windowDimensions.height;
       }
       case WM_MOVE: {
-        globalWindowDimensions = win32GetWindowDimension(window);
+        renderer.windowDimensions = win32GetWindowDimension(window);
         POINT upperLeft;
         upperLeft.x = 0;
         upperLeft.y = 0;
         ClientToScreen(window, &upperLeft);
         globalWindowLocation.upperLeftX = upperLeft.x;
         globalWindowLocation.upperLeftY = upperLeft.y;
-        globalWindowLocation.centerX = globalWindowLocation.upperLeftX + (globalWindowDimensions.width/2);
-        globalWindowLocation.centerY = globalWindowLocation.upperLeftY + (globalWindowDimensions.height/2);
+        globalWindowLocation.centerX = globalWindowLocation.upperLeftX + (renderer.windowDimensions.width/2);
+        globalWindowLocation.centerY = globalWindowLocation.upperLeftY + (renderer.windowDimensions.height/2);
       } break;
       case WM_PAINT: {
         PAINTSTRUCT Paint;
         HDC DeviceContext = BeginPaint(window, &Paint);
-        globalWindowDimensions = win32GetWindowDimension(window);
+        renderer.windowDimensions = win32GetWindowDimension(window);
         EndPaint(window, &Paint);
-        glViewport(0, 0, globalWindowDimensions.width, globalWindowDimensions.height);
+        glViewport(0, 0, renderer.windowDimensions.width, renderer.windowDimensions.height);
       } break;
       default: {
         result = DefWindowProc(window, message, WParam, LParam);
@@ -231,6 +230,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
       float spriteFlipCounter = 0.0f;
 
       //load level geometry/data
+      renderer.globalLight = V3(4.0f, 4.0f, .5f);
       levelData.initialize(&levelGeo, &renderer);
       levelGeo.initialize();
 
@@ -238,17 +238,18 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
       for(size_t i = 0; i < levelGeo.AABBs.size(); i++) {
         renderer.addDebugVolume(levelGeo.AABBs[i].center, levelGeo.AABBs[i].rad);
       }
+      renderer.addDebugVolume(renderer.globalLight, V3(.15,.15,.15));
+      renderer.debugDrawLine(renderer.globalLight, V3(0,0,0));
       for (size_t i = 0; i < levelGeo.OBBs.size(); i++) {
         renderer.addDebugVolume(levelGeo.OBBs[i].c, levelGeo.OBBs[i].u, levelGeo.OBBs[i].width);
       }
-
       renderer.initialize();
       keyboardState.initialize();
       player.initialize();
       POINT mousePoint;
       SetCursorPos(globalWindowLocation.centerX, globalWindowLocation.centerY);
       float time = 0.0f;
-      renderer.aspectRatio = (float) globalWindowDimensions.width / (float) globalWindowDimensions.height;
+      renderer.aspectRatio = (float) renderer.windowDimensions.width / (float) renderer.windowDimensions.height;
       player.vel = V3(0.0f,0.0f,0.0f);
       player.acc = V3(0.0f,0.0f,0.0f);
       v3 playerOffset = V3(0.0f,0.0f,0.0f);
@@ -310,13 +311,16 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
         }
         else {
           //game is paused, draw pause screen/menu/whatever
+          if(keyboardState.cameraLock) { //camera is locked to player
+            cameraPosition = V3(player.center.x, player.center.y, player.center.z) ;
+            viewDir = player.viewDir;
+          }
+          else { //currently using free cam
+            viewDir = freeCamera.viewDir;
+            cameraPosition = freeCamera.center;
+          }
         }
-
-
-        glClearColor(1.0,0.0,1.0,1.0);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        wglSwapInterval(1);
-       
+        
         m4x4 viewMat = aroLookat(cameraPosition, cameraPosition + viewDir);
         glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(m4x4), viewMat.n);
 
@@ -335,7 +339,6 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
         char buffer[512];
         sprintf_s(buffer, "Player: %f, %f, %f\n", player.center.x, player.center.y, player.center.z);
         OutputDebugStringA(buffer);
-        
         
         /*
         long long swapdif = endProfGL.QuadPart - beginProfGL.QuadPart;

@@ -124,6 +124,7 @@ m4x4 makeRotY(float t);
 m4x4 makeRotZ(float t);
 m4x4 translate(v3 v);
 m4x4 translate(m4x4& m, v3 v);
+m4x4 transpose(m4x4& a);
 
 void getOrthoProjMatrix(const float &b, const float &t, const float &l, const float &r, const float &n, const float &f, m4x4& M);
 void aroInfFrustrum(const float &b, const float &t, const float &l, const float &r, const float &n, m4x4& M);

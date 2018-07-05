@@ -36,7 +36,9 @@ gl_uniform_1f* glUniform1f;
 gl_uniform_1i* glUniform1i;
 gl_uniform_2f* glUniform2f;
 gl_uniform_3f* glUniform3f;
+gl_uniform_3fv* glUniform3fv;
 gl_uniform_4f* glUniform4f;
+gl_uniform_4fv* glUniform4fv;
 gl_get_programiv* glGetProgramiv;
 gl_get_program_info_log* glGetProgramInfoLog;
 gl_delete_shader* glDeleteShader;
@@ -49,6 +51,11 @@ gl_uniform_block_binding* glUniformBlockBinding;
 gl_get_uniform_block_index* glGetUniformBlockIndex;
 gl_bind_buffer_range* glBindBufferRange;
 gl_debug_message_callback_arb* glDebugMessageCallbackARB;
+gl_gen_framebuffers* glGenFramebuffers;
+gl_framebuffer_texture2D* glFramebufferTexture2D;
+gl_bind_framebuffer* glBindFramebuffer;
+gl_check_framebuffer_status* glCheckFramebufferStatus;
+
 
 opengl_info checkOpenGLExtensions() {
   if(!glGetStringi) {
@@ -121,7 +128,9 @@ static bool loadGLCoreFunctions() {
   if(!(glUniform1i = (gl_uniform_1i*) getWin32GLFunc("glUniform1i")) ){return false;}    
   if(!(glUniform2f = (gl_uniform_2f*) getWin32GLFunc("glUniform2f")) ){return false;}    
   if(!(glUniform3f = (gl_uniform_3f*) getWin32GLFunc("glUniform3f")) ){return false;}    
+  if(!(glUniform3fv = (gl_uniform_3fv*) getWin32GLFunc("glUniform3fv")) ){return false;}
   if(!(glUniform4f = (gl_uniform_4f*) getWin32GLFunc("glUniform4f")) ){return false;}    
+  if(!(glUniform4fv = (gl_uniform_4fv*) getWin32GLFunc("glUniform4fv")) ){return false;}
   if(!(glGetProgramiv = (gl_get_programiv*) getWin32GLFunc("glGetProgramiv")) ){return false;}    
   if(!(glGetProgramInfoLog = (gl_get_program_info_log*) getWin32GLFunc("glGetProgramInfoLog")) ){return false;}    
   if(!(glDeleteShader = (gl_delete_shader*) getWin32GLFunc("glDeleteShader")) ){return false;}    
@@ -133,6 +142,10 @@ static bool loadGLCoreFunctions() {
   if(!(glUniformBlockBinding = (gl_uniform_block_binding*) getWin32GLFunc("glUniformBlockBinding")) ){return false;}
   if(!(glGetUniformBlockIndex = (gl_get_uniform_block_index*) getWin32GLFunc("glGetUniformBlockIndex")) ){return false;}
   if(!(glBindBufferRange = (gl_bind_buffer_range*) getWin32GLFunc("glBindBufferRange")) ){return false;}
+  if(!(glGenFramebuffers = (gl_gen_framebuffers*) getWin32GLFunc("glGenFramebuffers")) ){return false;}
+  if(!(glFramebufferTexture2D = (gl_framebuffer_texture2D*) getWin32GLFunc("glFramebufferTexture2D")) ){return false;}
+  if(!(glBindFramebuffer = (gl_bind_framebuffer*) getWin32GLFunc("glBindFramebuffer")) ){return false;}
+  if(!(glCheckFramebufferStatus = (gl_check_framebuffer_status*) getWin32GLFunc("glCheckFramebufferStatus")) ){return false;}
   return true;
 }
 

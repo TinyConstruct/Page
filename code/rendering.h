@@ -3,9 +3,11 @@
 
 #include "bitmap.h"
 #include "aro_math.h"
+#include "aro_platform_win32.h"
 enum {LEVEL_BUFFER};
 enum {FLOOR1=0,FLOOR2, FLOOR3, WALL1, WALL2, CEIL1, CITY2_2, CITY3_2, CITY4_1, METALBOX, MAX_TEX};
 enum {N_FLOOR1=0,N_FLOOR2, N_FLOOR3, N_WALL1, N_WALL2, N_CEIL1, N_CITY2_2, N_CITY3_2, N_CITY4_1, N_METALBOX, N_MAX_TEX};
+const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
 
 struct Vertpcnu {
   v3 position;
@@ -27,11 +29,16 @@ struct Color {
 
 class Renderer {
 public:
+  Win32WindowDimensions windowDimensions;
+  //TODO: move these to per-light arrays?
+  GLuint depthMapFBO;
+  GLuint depthMap;
   TextureHandle texTable[MAX_TEX];
   TextureHandle texNormTable[N_MAX_TEX];
-  GLuint textureLocation, normTextureLocation;
+  GLuint textureLocation, normTextureLocation, depthMapTextureLocation;
   GLuint vbo, ebo, uniformBuffer;
-  GLuint shaderID;
+  GLuint shaderID, shadowShaderID;
+  v3 globalLight;
   float aspectRatio;
   std::vector<Vertpcnu> level; 
   std::vector<int> levelElements;
@@ -57,6 +64,7 @@ public:
   void addTri(Vertpcnu& a, Vertpcnu& b, Vertpcnu& c);
   void addDebugVolume(v3& center, v3 axes[3], v3& halfW);
   void debugDrawLine(v3& start, v3& end);
+  void renderShadowMap();
 };
 
 GLuint loadTexture(Texture* texture, char* bmpPath);

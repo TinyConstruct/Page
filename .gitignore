@@ -15,3 +15,8 @@
 *.ilk
 data/dungeon1backup.dat
 data/dungeon1.dat
+assets/QRP_map_textures_v.1.00.pk3
+assets/QRP_normalmap_textures_add-on_v.1.00.pk3
+data/baddungeon1.dat
+data/talldungeon1.dat
+nsight_profiler.cfg

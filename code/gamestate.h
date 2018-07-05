@@ -16,6 +16,7 @@ class Player {
   float walkingSpeed;
   float sprintSpeed;
   v3 vel, acc;
+  float radius, halfHeight;
   void initialize();
 };
 

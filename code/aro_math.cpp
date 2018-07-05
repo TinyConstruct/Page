@@ -414,6 +414,16 @@ m4x4 operator*(m4x4& a, m4x4& b) {
   return result;
 }
 
+m4x4 transpose(m4x4& a) {
+  //TODO: this is slow
+  m4x4 result = M4x4(
+    a.n[0][0], a.n[1][0], a.n[2][0], a.n[3][0], 
+    a.n[0][1], a.n[1][1], a.n[2][1], a.n[3][1],
+    a.n[0][2], a.n[1][2], a.n[2][2], a.n[3][2], 
+    a.n[0][3], a.n[1][3], a.n[2][3], a.n[3][3]);
+  return result;
+  }
+
 //Vector operations//////////////////////////////////////
 inline float dot(v2 a, v2 b) {
   return (a.x*b.x + a.y*b.y);
@@ -563,66 +573,6 @@ void aroPerspective(m4x4& M, float fovy, float aspect, float near, float far) {
   ymax = near * tanf(fovy * M_PI / 360.0f);
   xmax = ymax*aspect;
   aroFrustrum(M, -xmax, xmax, -ymax, ymax, near, far);
-}
-
-m4x4 aroLookatc(v3* eyePosition, v3* viewCenter) {
-  v3 forward = normalize(*viewCenter - *eyePosition);
-  v3 right = normalize(cross(forward, V3(0.0, 1.0, 0.0)));
-  v3 up = normalize(cross(right, forward));
-
-  m4x4 M;
-  M.n[0][0] = right.x; 
-  M.n[0][1] = up.x;
-  M.n[0][2] = forward.x;
-  M.n[0][3] = 0.0; 
- 
-  M.n[1][0] = right.y; 
-  M.n[1][1] = up.y; 
-  M.n[1][2] = forward.y;
-  M.n[1][3] = 0.0; 
- 
-  M.n[2][0] = right.z; 
-  M.n[2][1] = up.z;
-  M.n[2][2] = forward.z;
-  M.n[2][3] = 0.0; 
- 
-  M.n[3][0] = 0.0f; 
-  M.n[3][1] = 0.0f; 
-  M.n[3][2] = 0.0f; 
-  M.n[3][3] = 1.0f;
-
-  v3 p = V3(-eyePosition->x, -eyePosition->y, -eyePosition->z);
-  return (M*translate(p));
-}
-
-m4x4 aroLookatb(v3* eyePosition, v3* viewCenter) {
-  v3 forward = normalize(*viewCenter - *eyePosition);
-  v3 right = normalize(cross(forward, V3(0.0, 1.0, 0.0)));
-  v3 up = normalize(cross(right, forward));
-
-  m4x4 M;
-  M.n[0][0] = right.x; 
-  M.n[0][1] = right.y;
-  M.n[0][2] = right.z;
-  M.n[0][3] = 0.0; 
- 
-  M.n[1][0] = right.x; 
-  M.n[1][1] = up.y; 
-  M.n[1][2] = up.z;
-  M.n[1][3] = 0.0; 
- 
-  M.n[2][0] = -right.y; 
-  M.n[2][1] = -forward.x;
-  M.n[2][2] = -forward.z;
-  M.n[2][3] = 0.0; 
- 
-  M.n[3][0] = 0.0f; 
-  M.n[3][1] = 0.0f; 
-  M.n[3][2] = 0.0f; 
-  M.n[3][3] = 1.0f;
-
-  v3 p = V3(eyePosition->x, eyePosition->y, eyePosition->z);
-  return (M*translate(p));
 }
 
 m4x4 aroLookatRowMajor(v3 &eyePosition, v3 &viewCenter)

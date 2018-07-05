@@ -27,26 +27,35 @@ layout(std140) uniform GlobalMatrices {
   mat4 projection;
   vec3 playerPos;
 };
+
+uniform mat4 lightSpaceMatrix;
+
 out vec3 fragPos;
+out vec4 fragPosLightspace;
 out vec3 texCoordOutFromVert;
 out vec3 tangentLightPos;
 out vec3 tangentViewPos;
 out vec3 tangentFragPos;
+out vec3 lightPos;
+out vec3 tangentDirectionalLight;
 
 void main()
 {
   gl_Position =  projection * view * vec4(position.x, position.y, position.z, 1.0f);
   fragPos = position.xyz;
   texCoordOutFromVert = texCoordIn;
-  
+  lightPos  =vec3(.5, 4.0, .5);
+  vec3 directionalLight = -(normalize(vec3(-.5, -4.0, -.5)));
+
   vec3 T = normalize(tangentIn);
   vec3 B = normalize(bitangentIn);
   vec3 N = normalize(normal);
   mat3 TBN = transpose(mat3(T, B, N));
-  tangentLightPos = TBN * vec3(4.0,.5,0.0);
+  tangentLightPos = TBN * lightPos;
   tangentViewPos = TBN * playerPos;
   tangentFragPos = TBN * fragPos;
-  
+  tangentDirectionalLight = TBN * directionalLight;
+  fragPosLightspace =  lightSpaceMatrix * vec4(fragPos, 1.0);
 }
 )FOO";
 
@@ -54,40 +63,184 @@ const char* fragmentSource = R"FOO(
 #version 450 core
 uniform sampler2DArray textureData;
 uniform sampler2DArray bumpMap;
+uniform sampler2D depthMap;
+
 in vec3 fragPos;
 in vec3 texCoordOutFromVert;
 in vec3 tangentLightPos;
 in vec3 tangentViewPos;
 in vec3 tangentFragPos;
+in vec3 lightPos;
+in vec3 tangentDirectionalLight;
+in vec4 fragPosLightspace;
+
 layout(std140) uniform GlobalMatrices {
   mat4 view;
   mat4 projection;
   vec3 playerPos;
 };
 out vec4 resultColor;
+
+float shadowCalculation(vec4 fragPosLightSpace) {
+    // perform perspective divide
+    vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+    // transform to [0,1] range
+    projCoords = projCoords * 0.5 + 0.5;
+    // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
+    float closestDepth = texture(depthMap, projCoords.xy).r; 
+    // get depth of current fragment from light's perspective
+    float currentDepth = projCoords.z;
+    // check whether current frag pos is in shadow
+    float shadow = currentDepth > closestDepth  ? 1.0 : 0.0;
+    return shadow;
+}  
+
 void main()
 {
-  vec3 lightcolor = vec3(1.0,1.0,1.0);
   vec3 normal = texture(bumpMap, texCoordOutFromVert.xyz).rgb;
   normal = normalize(normal * 2.0 - 1.0);
-
   vec3 texColor = texture(textureData, vec3(texCoordOutFromVert.xyz)).rgb;
-  vec3 lightColor = vec3(1.0,1.0,1.0);
-//ambient
-  float ambientIntensity= .1;
+  //texColor = texture(depthMap, texCoordOutFromVert.xy).rgb;
+  vec3 lightcolor = vec3(1.0,1.0,1.0);
+  
+//point light stuff
+  float distance = length(fragPos - lightPos);
+  float attenuation = 1.0 / (1 + .07 * distance + .017 * (distance * distance));    
+
+  //ambient
+  float ambientIntensity = .1;
   vec3 ambient = ambientIntensity*texColor;
-//diffuse  
+  //diffuse  
   vec3 lightDir = normalize(tangentLightPos - tangentFragPos);
   float diff = max(dot(normal, lightDir), 0.0);
   vec3 diffuse = diff * texColor;
-//specular
+  //specular
   vec3 viewerDir = normalize(tangentViewPos - tangentFragPos);
   vec3 reflectedDir = reflect(-lightDir, normal);
   vec3 halfwayDir = normalize(lightDir + viewerDir);  
   float specularIntensity = pow(max(dot(normal, halfwayDir), 0.0), 32.0);
   vec3 specular = vec3(0.2) * specularIntensity;
 
-  resultColor = vec4((ambient + diffuse + specular)*lightcolor, 1.0);
+  ambient  *= attenuation; 
+  diffuse  *= attenuation;
+  specular *= attenuation;   
+
+//Directional light stuff
+  //ambient
+  ambientIntensity= .6;
+  ambient = ambientIntensity*texColor;
+  //diffuse  
+  lightDir = tangentDirectionalLight;
+  diff = max(dot(normal, lightDir), 0.0);
+  diffuse = diff * texColor;
+  //specular
+  viewerDir = normalize(tangentViewPos - tangentFragPos);
+  reflectedDir = reflect(-lightDir, normal);
+  halfwayDir = normalize(lightDir + viewerDir);  
+  specularIntensity = pow(max(dot(normal, halfwayDir), 0.0), 32.0);
+  specular = vec3(0.2) * specularIntensity;
+
+  float shadow = shadowCalculation(fragPosLightspace);
+
+  resultColor = vec4((ambient + (1.0-shadow) * (diffuse+ specular))*lightcolor, 1.0);
+  //resultColor = vec4(ambient, 1.0);
+  //resultColor = vec4((ambient + (diffuse + specular))*lightcolor, 1.0);
+}
+)FOO";
+
+
+const char* noBumpVertexSourceUBUF = R"FOO(
+#version 450 core
+layout (location = 0) in vec3 position;
+layout (location = 1) in vec3 color;
+layout (location = 2) in vec3 normal;
+layout (location = 3) in vec3 texCoordIn;
+layout(std140) uniform GlobalMatrices {
+  mat4 view;
+  mat4 projection;
+  vec3 playerPos;
+};
+
+uniform mat4 lightSpaceMatrix;
+uniform vec3 globalLight;
+
+out vec3 fragPos;
+out vec4 fragPosLightspace;
+out vec3 texCoordOutFromVert;
+out vec3 lightPos;
+out vec3 normalOutFromVert;
+
+void main()
+{
+  gl_Position =  projection * view * vec4(position.x, position.y, position.z, 1.0f);
+  fragPos = position.xyz;
+  texCoordOutFromVert = texCoordIn;
+  lightPos  = globalLight;
+  normalOutFromVert = normal;
+  fragPosLightspace =  lightSpaceMatrix * vec4(fragPos, 1.0);
+}
+)FOO";
+
+const char* noBumpFragmentSource = R"FOO(
+#version 450 core
+uniform sampler2DArray textureData;
+uniform sampler2D depthMap;
+
+in vec3 fragPos;
+in vec3 texCoordOutFromVert;
+in vec3 lightPos;
+in vec4 fragPosLightspace;
+in vec3 normalOutFromVert;
+
+layout(std140) uniform GlobalMatrices {
+  mat4 view;
+  mat4 projection;
+  vec3 playerPos;
+};
+out vec4 resultColor;
+
+float shadowCalculation(vec4 fragPosLightSpace) {
+    // perform perspective divide
+    vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+    // transform to [0,1] range
+    projCoords = projCoords * 0.5 + 0.5;
+    // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
+    float closestDepth = texture(depthMap, projCoords.xy).r; 
+    // get depth of current fragment from light's perspective
+    float currentDepth = projCoords.z;
+    // check whether current frag pos is in shadow
+    float shadow = currentDepth > closestDepth  ? 1.0 : 0.0;
+    return shadow;
+}  
+
+void main()
+{
+  vec3 normal = normalize(normalOutFromVert);
+  vec3 texColor = texture(textureData, vec3(texCoordOutFromVert.xyz)).rgb;
+  //vec3 texColor = texture(depthMap, texCoordOutFromVert.xy).rgb;
+  vec3 lightcolor = vec3(1.0,1.0,1.0);
+  
+//Directional light stuff
+  //ambient
+  float ambientIntensity= .6;
+  vec3 ambient = ambientIntensity*texColor;
+  //diffuse  
+  vec3 lightDir = normalize(lightPos - fragPos);
+  float diff = max(dot(normal, lightDir), 0.0);
+  vec3 diffuse = diff * texColor;
+  //specular
+  vec3 viewerDir = normalize(playerPos - fragPos);
+  vec3 halfwayDir = normalize(lightDir + viewerDir);  
+  float specularIntensity = pow(max(dot(normal, halfwayDir), 0.0), 32.0);
+  vec3 specular = vec3(0.2) * specularIntensity;
+
+  float shadow = shadowCalculation(fragPosLightspace);
+  resultColor = vec4(fragPosLightspace.x, fragPosLightspace.y, fragPosLightspace.z, 1.0);
+  //resultColor = vec4(shadow, shadow, shadow, 1.0);
+  resultColor = vec4((ambient + (1.0-shadow) * (diffuse+ specular))*lightcolor, 1.0);
+  //resultColor = vec4(ambient, 1.0);
+  //resultColor = vec4((ambient + (diffuse + specular))*lightcolor, 1.0);
+
 }
 )FOO";
 
@@ -104,6 +257,29 @@ void main()
 {
   resultColor = vec4(1.0,1.0,1.0,1.0);
 }
+)FOO";
+
+const char* depthMapVertSource = R"FOO(
+#version 450 core
+layout (location = 0) in vec3 aPos;
+
+uniform mat4 lightSpaceMatrix;
+
+void main()
+{
+    gl_Position = lightSpaceMatrix * vec4(aPos, 1.0);
+}  
+)FOO";
+
+const char* depthMapFragSource = R"FOO(
+#version 450 core
+out vec4 resultColor;
+void main()
+{
+  gl_FragDepth = gl_FragCoord.z;
+  resultColor = vec4(gl_FragCoord.z,gl_FragCoord.z,gl_FragCoord.z,1.0);
+
+}  
 )FOO";
 
 int texStrToID(char* str) {
@@ -183,9 +359,14 @@ int texNormStrToID(char* str) {
 void compileShader(GLuint* shaderID, const char* vSrc, const char* fSrc) {
   GLuint vertShader, fragShader;
   int success;
+  GLenum errorNum;
+  errorNum = glGetError();
+
   vertShader = glCreateShader(GL_VERTEX_SHADER);
   glShaderSource(vertShader, 1, &vSrc, NULL);
   glCompileShader(vertShader);
+  errorNum = glGetError();
+
   // print compile errors if any
   glGetShaderiv(vertShader, GL_COMPILE_STATUS, &success);
   if(!success) {
@@ -194,6 +375,7 @@ void compileShader(GLuint* shaderID, const char* vSrc, const char* fSrc) {
     OutputDebugString(buffer);
     InvalidCodePath;
   }
+  errorNum = glGetError();
 
   fragShader = glCreateShader(GL_FRAGMENT_SHADER);
   glShaderSource(fragShader, 1, &fSrc, NULL);
@@ -206,12 +388,18 @@ void compileShader(GLuint* shaderID, const char* vSrc, const char* fSrc) {
     OutputDebugString(buffer);
     InvalidCodePath;
   }
+  errorNum = glGetError();
 
   // shader Program
   *shaderID = glCreateProgram();
   glAttachShader(*shaderID, vertShader);
+
+  errorNum = glGetError();
   glAttachShader(*shaderID, fragShader);
+  errorNum = glGetError();
   glLinkProgram(*shaderID);
+  errorNum = glGetError();
+
   // print linking errors if any
   glGetProgramiv(*shaderID, GL_LINK_STATUS, &success);
   if(!success)
@@ -224,16 +412,17 @@ void compileShader(GLuint* shaderID, const char* vSrc, const char* fSrc) {
   // delete the shaders as they're linked into our program now and no longer necessery
   glDeleteShader(vertShader);
   glDeleteShader(fragShader);
-  GLuint uniformBlockIndex = glGetUniformBlockIndex(*shaderID, "GlobalMatrices");
-  glUniformBlockBinding(*shaderID, uniformBlockIndex, 0);
 }
 
 void Renderer::initialize() {
-  compileShader(&shaderID, vertexSourceUBUF, fragmentSource);
+  compileShader(&shaderID, noBumpVertexSourceUBUF, noBumpFragmentSource);
+  GLuint uniformBlockIndex = glGetUniformBlockIndex(shaderID, "GlobalMatrices");
+  glUniformBlockBinding(shaderID, uniformBlockIndex, 0);
+  compileShader(&shadowShaderID, depthMapVertSource, depthMapFragSource);
   GLuint vao;
-  glGenVertexArrays(1, &vao);
+  glGenVertexArrays(1, &vao);  
   glBindVertexArray(vao);
-
+    
   glGenBuffers(1, &vbo);
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
   glBufferData(GL_ARRAY_BUFFER, level.size()*sizeof(Vertpcnu), level.data(), GL_DYNAMIC_DRAW);
@@ -244,13 +433,13 @@ void Renderer::initialize() {
   glBindBuffer(GL_UNIFORM_BUFFER, uniformBuffer);
   glBufferData(GL_UNIFORM_BUFFER, sizeof(m4x4) * 2 + sizeof(v3), NULL, GL_STREAM_DRAW);
   glBindBufferRange(GL_UNIFORM_BUFFER, 0, uniformBuffer, 0, sizeof(m4x4) * 2 + sizeof(v3));
-  
+
   GLint posAttrib = glGetAttribLocation(shaderID, "position");
   glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertpcnu), 0);
   glEnableVertexAttribArray(posAttrib);
-  GLint color = glGetAttribLocation(shaderID, "color");
-  glVertexAttribPointer(color, 3, GL_FLOAT, GL_FALSE, sizeof(Vertpcnu), (void*)(sizeof(v3)));
-  glEnableVertexAttribArray(color);
+  //GLint color = glGetAttribLocation(shaderID, "color");
+  //glVertexAttribPointer(color, 3, GL_FLOAT, GL_FALSE, sizeof(Vertpcnu), (void*)(sizeof(v3)));
+  //glEnableVertexAttribArray(color);
   GLint normal = glGetAttribLocation(shaderID, "normal");
   glVertexAttribPointer(normal, 3, GL_FLOAT, GL_FALSE, sizeof(Vertpcnu), (void*)(sizeof(v3)*2));
   glEnableVertexAttribArray(normal);
@@ -260,9 +449,12 @@ void Renderer::initialize() {
 
   textureLocation = glGetUniformLocation(shaderID, "textureData");
   normTextureLocation = glGetUniformLocation(shaderID, "bumpMap");
+  depthMapTextureLocation = glGetUniformLocation(shaderID, "depthMap");
+
   glUseProgram(shaderID);
   glUniform1i(textureLocation, 0);
   glUniform1i(normTextureLocation, 1);
+  glUniform1i(depthMapTextureLocation, 2);
 
   #if DEBUG_BUILD
     debugPlayerElements.push_back(0);
@@ -305,41 +497,112 @@ void Renderer::initialize() {
     glBufferData(GL_ARRAY_BUFFER, debugPlayerVerts.size()*sizeof(v3), debugPlayerVerts.data(), GL_DYNAMIC_DRAW);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, debugPlayerElements.size()*sizeof(int), debugPlayerElements.data(), GL_DYNAMIC_DRAW);
   #endif
+
+  //begin shadowmap setup
+  glGenFramebuffers(1, &depthMapFBO);
+  glGenTextures(1, &depthMap);
+  glBindTexture(GL_TEXTURE_2D, depthMap);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
   
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); 
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);  
+  glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+  
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
+  //glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthMap, 0);
+
+  glDrawBuffer(GL_NONE);
+  glReadBuffer(GL_NONE);
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);  
+
+  //end shadowmap setup
+
   glEnable(GL_DEPTH_TEST);
   glCullFace(GL_BACK);
   glEnable(GL_CULL_FACE);
+
+  wglSwapInterval(1);
 }
 
+void Renderer::renderShadowMap() {
+  
+}
 
 void Renderer::draw() {
-  glUseProgram(shaderID);
-  //glEnable(GL_FRAMEBUFFER_SRGB); 
+  glClearColor(1.0f, 0.0f, 1.0f, 1.0f);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        
+  //Render for shadow map
+  glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+  glClear(GL_DEPTH_BUFFER_BIT);
+  
+  m4x4 lightProjection;
+  getOrthoProjMatrix(-10.0f, 10.0f, -10.0f, 10.0f, .25f, 20.0f, lightProjection);
+  //aroPerspective(lightProjection, 60.0f, 1, 0.1f, 1000.0f);
+  m4x4 lightView = aroLookat(globalLight, V3(0.0f,0.0f,0.0f));
+  m4x4 lightSpaceMatrix =  (transpose(lightProjection) * transpose(lightView));
+  glUseProgram(shadowShaderID);
+
+  GLint lightSpaceMatrixAttrib = glGetUniformLocation(shadowShaderID, "lightSpaceMatrix");
+  glUniformMatrix4fv(lightSpaceMatrixAttrib, 1, GL_FALSE, (GLfloat*) lightSpaceMatrix.n);
+  
+  glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+  glActiveTexture(GL_TEXTURE0); 
+  glBindTexture(GL_TEXTURE_2D_ARRAY, texTable[1].glTextureNum);
+
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+  GLint shadowPosAttrib = glGetAttribLocation(shadowShaderID, "aPos");
+  glVertexAttribPointer(shadowPosAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertpcnu), 0);
+  glEnableVertexAttribArray(shadowPosAttrib);
+  if(!(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE)) {
+    InvalidCodePath;
+  }
+  glDrawElements(GL_TRIANGLES, levelElements.size(), GL_UNSIGNED_INT, 0);
+    
+  //Normal render
+  glClearColor(1.0,0.0,1.0,1.0);
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);  
+  glViewport(0, 0, windowDimensions.width, windowDimensions.height);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glUseProgram(shaderID);
+
+//glEnable(GL_FRAMEBUFFER_SRGB); 
+  glBindBuffer(GL_ARRAY_BUFFER, vbo);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+  lightSpaceMatrixAttrib = glGetUniformLocation(shaderID, "lightSpaceMatrix");
+  glUniformMatrix4fv(lightSpaceMatrixAttrib, 1, GL_FALSE, (GLfloat*) lightSpaceMatrix.n);
+  GLint globalLightAttrib = glGetUniformLocation(shaderID, "globalLight");
+  glUniform3fv(globalLightAttrib, 1, (GLfloat*) &globalLight);
+
   GLint posAttrib = glGetAttribLocation(shaderID, "position");
   glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertpcnu), 0);
   glEnableVertexAttribArray(posAttrib);
-  GLint color = glGetAttribLocation(shaderID, "color");
-  glVertexAttribPointer(color, 3, GL_FLOAT, GL_FALSE, sizeof(Vertpcnu), (void*)(sizeof(v3)));
-  glEnableVertexAttribArray(color);
   GLint normal = glGetAttribLocation(shaderID, "normal");
   glVertexAttribPointer(normal, 3, GL_FLOAT, GL_FALSE, sizeof(Vertpcnu), (void*)(sizeof(v3)*2));
   glEnableVertexAttribArray(normal);
   GLint texCoord = glGetAttribLocation(shaderID, "texCoordIn");
   glVertexAttribPointer(texCoord, 3, GL_FLOAT, GL_FALSE, sizeof(Vertpcnu), (void*)(sizeof(v3)*3));
   glEnableVertexAttribArray(texCoord);
-  GLint tangent = glGetAttribLocation(shaderID, "tangentIn");
-  glVertexAttribPointer(tangent, 3, GL_FLOAT, GL_FALSE, sizeof(Vertpcnu), (void*)(sizeof(v3)*4));
-  glEnableVertexAttribArray(tangent);
-  GLint bitangent = glGetAttribLocation(shaderID, "bitangentIn");
-  glVertexAttribPointer(bitangent, 3, GL_FLOAT, GL_FALSE, sizeof(Vertpcnu), (void*)(sizeof(v3)*5));
-  glEnableVertexAttribArray(bitangent);
+  //GLint tangent = glGetAttribLocation(shaderID, "tangentIn");
+  //glVertexAttribPointer(tangent, 3, GL_FLOAT, GL_FALSE, sizeof(Vertpcnu), (void*)(sizeof(v3)*4));
+  //glEnableVertexAttribArray(tangent);
+  //GLint bitangent = glGetAttribLocation(shaderID, "bitangentIn");
+  //glVertexAttribPointer(bitangent,3 , GL_FLOAT, GL_FALSE, sizeof(Vertpcnu), (void*)(sizeof(v3)*5));
+  //glEnableVertexAttribArray(bitangent);
 
   glActiveTexture(GL_TEXTURE0 + 0); 
   glBindTexture(GL_TEXTURE_2D_ARRAY, texTable[1].glTextureNum);
   glActiveTexture(GL_TEXTURE0 + 1); 
   glBindTexture(GL_TEXTURE_2D_ARRAY, texNormTable[1].glTextureNum);
+  glActiveTexture(GL_TEXTURE0 + 2);
+  glBindTexture(GL_TEXTURE_2D, depthMap);
+
+  //If we want to render the scene from the light's perspective:
+  //glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(m4x4), lightView.n);
+  //glBufferSubData(GL_UNIFORM_BUFFER, sizeof(m4x4), sizeof(m4x4), lightProjection.n);
   
   glDrawElements(GL_TRIANGLES, levelElements.size(), GL_UNSIGNED_INT, 0);
   #if DEBUG_BUILD
