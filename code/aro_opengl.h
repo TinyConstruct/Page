@@ -1,6 +1,8 @@
 #ifndef __ARO_OPENGL__
 #define __ARO_OPENGL__
 
+//#define GL_DEBUG 1
+
 //These are windows specific
 #define WGL_CONTEXT_MAJOR_VERSION               0x2091
 #define WGL_CONTEXT_MINOR_VERSION               0x2092
@@ -62,6 +64,16 @@
 #define GL_TEXTURE_2D_ARRAY                       0x8C1A
 #define GL_MAX_ARRAY_TEXTURE_LAYERS               0x88FF
 #define GL_MAX_TEXTURE_IMAGE_UNITS                0x8872
+#define GL_TEXTURE_CUBE_MAP                       0x8513
+#define GL_TEXTURE_CUBE_MAP_POSITIVE_X            0x8515
+#define GL_TEXTURE_WRAP_R                         0x8072
+
+#define GL_FRAMEBUFFER_COMPLETE                   0x8CD5
+#define GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT      0x8CD6
+#define GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT 0x8CD7
+#define GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER     0x8CDB
+#define GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER     0x8CDC
+#define GL_FRAMEBUFFER_UNSUPPORTED                0x8CDD
 
 #define GL_TEXTURE0                               0x84C0
 #define GL_TEXTURE1                               0x84C1
@@ -101,6 +113,7 @@
 #define GL_DEPTH_ATTACHMENT                       0x8D00
 #define GL_DEPTH_COMPONENT32                      0x81A7
 #define GL_FRAMEBUFFER_SRGB                       0x8DB9
+#define GL_GEOMETRY_SHADER                        0x8DD9
 
 typedef ptrdiff_t GLsizeiptr;
 
@@ -168,10 +181,13 @@ typedef void WINAPI gl_gen_framebuffers (GLsizei n, GLuint *framebuffers);
 typedef void WINAPI gl_framebuffer_texture2D (GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
 typedef void WINAPI gl_bind_framebuffer (GLenum target, GLuint framebuffer);
 typedef GLenum WINAPI gl_check_framebuffer_status (GLenum target);
+typedef void WINAPI gl_framebuffer_texture (GLenum target, GLenum attachment, GLuint texture, GLint level);
+typedef void WINAPI gl_copy_image_subdata (GLuint srcName, GLenum srcTarget, GLint srcLevel, GLint srcX, GLint srcY, GLint srcZ, GLuint dstName, GLenum dstTarget, GLint dstLevel, GLint dstX, GLint dstY, GLint dstZ, GLsizei srcWidth, GLsizei srcHeight, GLsizei srcDepth);
+
 
 typedef void WINAPI gl_uniform_block_binding (GLuint program, GLuint uniformBlockIndex, GLuint uniformBlockBinding);
 typedef GLuint WINAPI gl_get_uniform_block_index (GLuint program, const GLchar *uniformBlockName);
-
+typedef GLuint WINAPI gl_get_debug_message_log (GLuint count, GLsizei bufSize, GLenum *sources, GLenum *types, GLuint *ids, GLenum *severities, GLsizei *lengths, GLchar *messageLog);
 
 extern wgl_swap_interval_ext* wglSwapInterval;
 extern wgl_create_context_attribs_arb* wglCreateContextAttribsARB;
@@ -223,7 +239,11 @@ extern gl_check_framebuffer_status* glCheckFramebufferStatus;
 
 extern gl_framebuffer_texture2D* glFramebufferTexture2D;
 extern gl_bind_framebuffer* glBindFramebuffer;
+extern gl_framebuffer_texture* glFramebufferTexture;
+extern gl_copy_image_subdata* glCopyImageSubData;
 
+extern gl_get_debug_message_log* glGetDebugMessageLog;
 
 void win32InitOpenGL(HWND window);
+void diagnoseFramebuffer(GLenum t);
 #endif //__ARO_OPENGL__

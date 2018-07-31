@@ -102,7 +102,7 @@ m4x4 M4x4(float n00,float n01,float n02,float n03,
 
 m4x4 rows4x4(v3 a, v3 b, v3 c);
 m4x4 cols4x4(v3 a, v3 b, v3 c);
-m4x4 identity(void);
+m4x4 identity();
 v3 col(m4x4& a, unsigned int c);
 v3 row(m4x4& a, unsigned int r);
 v4 operator*(m4x4& m, v4 v);
@@ -133,5 +133,6 @@ void aroPerspective(m4x4& M, float fovy, float aspect, float near, float far);
 m4x4 aroLookatc(v3* eyePosition, v3* viewCenter);
 m4x4 aroLookatb(v3* eyePosition, v3* viewCenter);
 m4x4 aroLookat(v3 &eyePosition, v3 &viewCenter);
+m4x4 aroLookat(v3 &eyePosition, v3 &viewCenter, v3 &upInput);
 
 #endif // __ARO_MATH__

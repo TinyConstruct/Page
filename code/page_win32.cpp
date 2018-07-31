@@ -31,6 +31,9 @@ static LevelData levelData;
 static Renderer renderer;
 static KeyboardState keyboardState;
 static Camera freeCamera;
+#if DEBUG_BUILD
+  static GLDebugLog glDebugLog;
+#endif
 
 LRESULT CALLBACK
 win32MainWindowCallback(HWND window, UINT message, WPARAM WParam, LPARAM LParam) {       
@@ -230,7 +233,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
       float spriteFlipCounter = 0.0f;
 
       //load level geometry/data
-      renderer.globalLight = V3(4.0f, 4.0f, .5f);
+      renderer.globalLight = V3(0.0f, 2.0, -0.5);
       levelData.initialize(&levelGeo, &renderer);
       levelGeo.initialize();
 
@@ -339,7 +342,11 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
         char buffer[512];
         sprintf_s(buffer, "Player: %f, %f, %f\n", player.center.x, player.center.y, player.center.z);
         OutputDebugStringA(buffer);
-        
+        #if GL_DEBUG
+          glGetDebugMessageLog(100, 50000, glDebugLog.sources, glDebugLog.types, glDebugLog.ids, glDebugLog.severities, glDebugLog.lengths, glDebugLog.buffer);
+          int debugTestBreakpoint = 0;
+          debugTestBreakpoint++;
+        #endif
         /*
         long long swapdif = endProfGL.QuadPart - beginProfGL.QuadPart;
         if (swapdif > (long long) 10000) {

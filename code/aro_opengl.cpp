@@ -55,7 +55,10 @@ gl_gen_framebuffers* glGenFramebuffers;
 gl_framebuffer_texture2D* glFramebufferTexture2D;
 gl_bind_framebuffer* glBindFramebuffer;
 gl_check_framebuffer_status* glCheckFramebufferStatus;
+gl_framebuffer_texture* glFramebufferTexture;
+gl_copy_image_subdata* glCopyImageSubData;
 
+gl_get_debug_message_log* glGetDebugMessageLog;
 
 opengl_info checkOpenGLExtensions() {
   if(!glGetStringi) {
@@ -89,7 +92,7 @@ bool loadGLWinFunctions() {
 
 void APIENTRY glDebugOutput(GLenum source, GLenum type, GLuint id, GLenum severity,  GLsizei length, const GLchar *message, void *userParam) {
   if(severity == DEBUG_SEVERITY_HIGH) {
-    char *ErrorMessage = (char *)message;
+    char* ErrorMessage = (char *)message;
     assert(!"OpenGL Error encountered");
   }
 }
@@ -146,6 +149,9 @@ static bool loadGLCoreFunctions() {
   if(!(glFramebufferTexture2D = (gl_framebuffer_texture2D*) getWin32GLFunc("glFramebufferTexture2D")) ){return false;}
   if(!(glBindFramebuffer = (gl_bind_framebuffer*) getWin32GLFunc("glBindFramebuffer")) ){return false;}
   if(!(glCheckFramebufferStatus = (gl_check_framebuffer_status*) getWin32GLFunc("glCheckFramebufferStatus")) ){return false;}
+  if (!(glFramebufferTexture = (gl_framebuffer_texture*)getWin32GLFunc("glFramebufferTexture"))){ return false; }
+  if (!(glCopyImageSubData = (gl_copy_image_subdata*)getWin32GLFunc("glCopyImageSubData"))){ return false; }
+  if (!(glGetDebugMessageLog = (gl_get_debug_message_log*)getWin32GLFunc("glGetDebugMessageLog"))){ return false; }
   return true;
 }
 
@@ -171,7 +177,7 @@ void win32InitOpenGL(HWND window) {
     if(wglCreateContextAttribsARB) {
       int attribs[] = {WGL_CONTEXT_MAJOR_VERSION, 4,  WGL_CONTEXT_MINOR_VERSION, 5, 
       WGL_CONTEXT_FLAGS , WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB 
-      #ifdef DEBUG
+      #ifdef GL_DEBUG
       | WGL_CONTEXT_DEBUG_BIT
       #endif
       ,WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB, 0};
@@ -181,7 +187,7 @@ void win32InitOpenGL(HWND window) {
         wglMakeCurrent(windowDC, modernContext);
         wglDeleteContext(openGLRC);
         openGLRC = modernContext;
-        #ifdef DEBUG
+        #ifdef GL_DEBUG
         loadDebugFunctions();
         #endif
         if(!loadGLCoreFunctions()) {
@@ -262,4 +268,11 @@ GLuint compileShader(const char* vertSrc, const char* fragSrc) {
   glDeleteShader(vertex);
   glDeleteShader(fragment);
   return ID;
+}
+
+void diagnoseFramebuffer(GLenum t) {
+GLenum check = glCheckFramebufferStatus(t);
+  if(check != GL_FRAMEBUFFER_COMPLETE) {
+    //InvalidCodePath;
+  }
 }

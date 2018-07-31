@@ -8,6 +8,16 @@ enum {LEVEL_BUFFER};
 enum {FLOOR1=0,FLOOR2, FLOOR3, WALL1, WALL2, CEIL1, CITY2_2, CITY3_2, CITY4_1, METALBOX, MAX_TEX};
 enum {N_FLOOR1=0,N_FLOOR2, N_FLOOR3, N_WALL1, N_WALL2, N_CEIL1, N_CITY2_2, N_CITY3_2, N_CITY4_1, N_METALBOX, N_MAX_TEX};
 const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
+const float SHADOW_ASPECT = (float)SHADOW_WIDTH/(float)SHADOW_HEIGHT;
+
+struct GLDebugLog {
+  GLenum sources[100];
+  GLenum types[100];
+  GLuint ids[100];
+  GLenum severities[100];
+  GLsizei lengths[100];
+  char buffer[50000];
+};
 
 struct Vertpcnu {
   v3 position;
@@ -27,18 +37,29 @@ struct Color {
   float r,g,b;
 };
 
+struct PointLightArray {
+  int numLights;
+  std::vector<GLuint> lightTexIds; 
+  std::vector<GLuint> lightFBOIds; 
+  std::vector<m4x4> perspViews;
+  std::vector<v3> positions; 
+  std::vector<Color> colors;
+};
+
 class Renderer {
 public:
   Win32WindowDimensions windowDimensions;
-  //TODO: move these to per-light arrays?
+  m4x4 pointShadowProjMat;
+  float pointShadowProjMatFarPlane;
   GLuint depthMapFBO;
   GLuint depthMap;
   TextureHandle texTable[MAX_TEX];
   TextureHandle texNormTable[N_MAX_TEX];
-  GLuint textureLocation, normTextureLocation, depthMapTextureLocation;
+  GLuint textureLocation, normTextureLocation, depthMapTextureLocation, depthCubeMapLocation;
   GLuint vbo, ebo, uniformBuffer;
   GLuint shaderID, shadowShaderID;
   v3 globalLight;
+  PointLightArray pointLights;
   float aspectRatio;
   std::vector<Vertpcnu> level; 
   std::vector<int> levelElements;
@@ -64,8 +85,10 @@ public:
   void addTri(Vertpcnu& a, Vertpcnu& b, Vertpcnu& c);
   void addDebugVolume(v3& center, v3 axes[3], v3& halfW);
   void debugDrawLine(v3& start, v3& end);
-  void renderShadowMap();
+  void addPointLight(PointLightArray* array, v3 position);
+  void renderPointLights(PointLightArray* plr);
 };
+
 
 GLuint loadTexture(Texture* texture, char* bmpPath);
 int texStrToID(char* str);

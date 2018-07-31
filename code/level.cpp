@@ -111,9 +111,9 @@ void LevelData::finalizeQuads() {
       axes[1] = normalize(dir2);
       axes[2] = a.normal;
 
-      //renderer->debugDrawLine(center, center + 3*axes[0]);
-      //renderer->debugDrawLine(center, center + 3*axes[1]);
-      //renderer->debugDrawLine(center, center + 3*axes[2]);
+      renderer->debugDrawLine(center, center + 3*axes[0]);
+      renderer->debugDrawLine(center, center + 3*axes[1]);
+      renderer->debugDrawLine(center, center + 3*axes[2]);
 
       rad.x = magnitude(dir1)*1.1f/2.0f;
       rad.y = magnitude(dir2)*1.1f/2.0f;

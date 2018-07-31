@@ -340,7 +340,7 @@ m4x4 cols4x4(v3 a, v3 b, v3 c) {
 }
 
 m4x4
-identity(void) {
+identity() {
     m4x4 result = 
     {
       {{1, 0, 0, 0},
@@ -606,6 +606,32 @@ m4x4 aroLookat(v3 &eyePosition, v3 &viewCenter)
   m4x4 result;
   v3 forward = normalize(viewCenter - eyePosition);
   v3 right = normalize(cross(forward, V3(0.0,1.0,0.0)));
+  v3 up = normalize(cross(right, forward));
+
+  result.n[0][0] = right.x;
+  result.n[0][1] = up.x;
+  result.n[0][2] = -forward.x;
+  result.n[0][3] = 0.0f;
+  result.n[1][0] = right.y;
+  result.n[1][1] = up.y;
+  result.n[1][2] = -forward.y;
+  result.n[1][3] = 0.0f;
+  result.n[2][0] = right.z;
+  result.n[2][1] = up.z;
+  result.n[2][2] = -forward.z;
+  result.n[2][3] = 0.0f;
+  result.n[3][0] = -dot(right,eyePosition);
+  result.n[3][1] = -dot(up,eyePosition);
+  result.n[3][2] = dot(forward,eyePosition);  
+  result.n[3][3] = 1.0f;
+  return result;
+}
+
+m4x4 aroLookat(v3 &eyePosition, v3 &viewCenter, v3 &upInput)
+{
+  m4x4 result;
+  v3 forward = normalize(viewCenter - eyePosition);
+  v3 right = normalize(cross(forward, upInput));
   v3 up = normalize(cross(right, forward));
 
   result.n[0][0] = right.x;
