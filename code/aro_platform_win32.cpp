@@ -3,6 +3,16 @@
 #include "aro_generic.h"
 #include "aro_platform_win32.h"
 
+void clipMouseToWindow(HWND& window) {
+  RECT mouseClipRect;
+  GetWindowRect(window, &mouseClipRect); 
+  ClipCursor(&mouseClipRect); 
+}
+
+void unclipMouse() {
+  ClipCursor(NULL);  
+}
+
 FileReadResult readWholeFile(char* fileName) {
   FileReadResult result = {};
   HANDLE fileHandle = CreateFile(fileName, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);

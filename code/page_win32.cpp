@@ -24,14 +24,14 @@
 
 static bool globalRunning;
 static Win32WindowLocation globalWindowLocation;
+static HWND globalWindowHandle;
 static Player player;
-const float playerDistPerSec = .25;
 static LevelGeometry levelGeo;
 static LevelData levelData;
 static Renderer renderer;
 static KeyboardState keyboardState;
 static Camera freeCamera;
-#if DEBUG_BUILD
+#if GL_DEBUG
   static GLDebugLog glDebugLog;
 #endif
 
@@ -64,10 +64,12 @@ win32MainWindowCallback(HWND window, UINT message, WPARAM WParam, LPARAM LParam)
       break;
       case 'P': {
         if(keyboardState.pause) {
+          ShowCursor(FALSE);
           keyboardState.pause = !keyboardState.pause;
           SetCursorPos(globalWindowLocation.centerX, globalWindowLocation.centerY);
         }
         else {
+          ShowCursor(TRUE);
           keyboardState.pause = !keyboardState.pause;
         }
       }
@@ -78,6 +80,19 @@ win32MainWindowCallback(HWND window, UINT message, WPARAM WParam, LPARAM LParam)
         freeCamera.yRotation = player.yRotation;
         freeCamera.pitch = player.pitch;
         freeCamera.viewDir = player.viewDir;
+      }
+      break;
+      case 'H': {
+        if(renderer.numMSAASamples == 1) {
+          renderer.numMSAASamples = 4;
+        }
+        else if (renderer.numMSAASamples == 4){
+          renderer.numMSAASamples = 8;
+        }
+        else {
+          renderer.numMSAASamples = 1;
+        }
+      renderer.reconfigureMSAA();
       }
       break;
       case VK_ESCAPE: {
@@ -133,16 +148,21 @@ win32MainWindowCallback(HWND window, UINT message, WPARAM WParam, LPARAM LParam)
     }
   }
   else {
-    switch(message)
-    {
+    switch(message) {
       case WM_CLOSE: {
         globalRunning = false;
       } break;
       case WM_ACTIVATEAPP: {
         if(WParam == WA_INACTIVE) {
           OutputDebugStringA("App sent to background\n");
+          if(renderer.clipMouse) {
+            unclipMouse();
+          }
         }
         else {
+          if(renderer.clipMouse) {
+            clipMouseToWindow(globalWindowHandle);
+          }
           OutputDebugStringA("App sent to foreground\n");
         }
       } break;
@@ -150,7 +170,16 @@ win32MainWindowCallback(HWND window, UINT message, WPARAM WParam, LPARAM LParam)
         globalRunning = false;
       } break;
       case WM_SIZE: {
+        renderer.windowDimensions = win32GetWindowDimension(window);
         renderer.aspectRatio = (float)renderer.windowDimensions.width / (float) renderer.windowDimensions.height;
+        if(renderer.clipMouse) {
+          clipMouseToWindow(globalWindowHandle);
+        }
+          //re-create multisample texture
+          glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, renderer.multisampleTextureLocation);
+          glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, 4, GL_RGB, renderer.windowDimensions.width, renderer.windowDimensions.height, GL_TRUE);
+          glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, 0);
+          glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, renderer.multisampleTextureLocation, 0);
       }
       case WM_MOVE: {
         renderer.windowDimensions = win32GetWindowDimension(window);
@@ -162,6 +191,9 @@ win32MainWindowCallback(HWND window, UINT message, WPARAM WParam, LPARAM LParam)
         globalWindowLocation.upperLeftY = upperLeft.y;
         globalWindowLocation.centerX = globalWindowLocation.upperLeftX + (renderer.windowDimensions.width/2);
         globalWindowLocation.centerY = globalWindowLocation.upperLeftY + (renderer.windowDimensions.height/2);
+        if(renderer.clipMouse) {
+          clipMouseToWindow(globalWindowHandle);
+        }
       } break;
       case WM_PAINT: {
         PAINTSTRUCT Paint;
@@ -181,6 +213,7 @@ win32MainWindowCallback(HWND window, UINT message, WPARAM WParam, LPARAM LParam)
 int CALLBACK
 WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showCode) {
   srand((unsigned int)time(NULL));
+  renderer.clipMouse = FALSE;
   WNDCLASS windowClass = {};
   windowClass.style = CS_HREDRAW|CS_VREDRAW|CS_OWNDC;
   windowClass.lpfnWndProc = win32MainWindowCallback;
@@ -189,8 +222,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
   windowClass.hCursor = LoadCursor(NULL, IDC_ARROW); 
   ShowCursor(FALSE);
   windowClass.lpszClassName = "Page";
-  if(RegisterClassA(&windowClass))
-  {
+  if(RegisterClassA(&windowClass)) {
   //drawable area 1280x800
     RECT clientRect;
     //AdjustWindowRectEx expects a RECT that contains the upper left and bottom right of the desired area, but it's exclusive for the greater bound, 
@@ -202,27 +234,19 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
     if(!AdjustWindowRectEx(&clientRect, WS_OVERLAPPEDWINDOW|WS_VISIBLE, FALSE, NULL)){ 
       InvalidCodePath;
     }
-    HWND window = CreateWindowExA(0, windowClass.lpszClassName, "Page",
+    globalWindowHandle = CreateWindowExA(0, windowClass.lpszClassName, "Page",
         WS_OVERLAPPEDWINDOW|WS_VISIBLE, clientRect.left, clientRect.top,
         clientRect.right - clientRect.left, clientRect.bottom - clientRect.top,
         0, 0, instance, 0);
-    if(window) {
-      //TODO: make this not broken
-      RECT mouseClipRect;           // new area for ClipCursor
-      RECT oldMouseClipRect;        // previous area for ClipCursor
-      // Record the area in which the cursor can move. 
-      GetClipCursor(&oldMouseClipRect); 
-      // Get the dimensions of the application's window. 
-      GetWindowRect(window, &mouseClipRect); 
-      // Confine the cursor to the application's window. 
-      ClipCursor(&mouseClipRect); 
-      // Restore the cursor to its previous area. 
-      ClipCursor(&oldMouseClipRect); 
+    if(globalWindowHandle) {
+      if(renderer.clipMouse){
+        clipMouseToWindow(globalWindowHandle);
+      }
 
-      win32InitOpenGL(window); //find a pixel format, wglCreateContext, etc.
+      win32InitOpenGL(globalWindowHandle); //find a pixel format, wglCreateContext, etc.
       //All OpenGL functions are now loaded. 
 
-      HDC dc = GetDC(window);
+      HDC dc = GetDC(globalWindowHandle);
       globalRunning = true;
 
       LARGE_INTEGER lastCounter, counterFreq;
@@ -347,19 +371,6 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
           int debugTestBreakpoint = 0;
           debugTestBreakpoint++;
         #endif
-        /*
-        long long swapdif = endProfGL.QuadPart - beginProfGL.QuadPart;
-        if (swapdif > (long long) 10000) {
-          float lastStutterTime = (float)(1000 * (endProfGL.QuadPart - lastStutter.QuadPart) / (float)counterFreq.QuadPart);
-          QueryPerformanceCounter(&lastStutter);
-          char buffer[512];
-          sprintf_s(buffer, "time since stutter: %f\n", lastStutterTime);
-          OutputDebugStringA(buffer);
-          sprintf_s(buffer, "stutter length: %lld\n", swapdif);
-          OutputDebugStringA(buffer);
-        }
-        */
-
       }    
     }
     else

@@ -7,7 +7,6 @@
 #include "aro_opengl.h"
 
 global_variable opengl_info globalGLInfo;
-
 wgl_swap_interval_ext* wglSwapInterval;
 wgl_create_context_attribs_arb* wglCreateContextAttribsARB;
 
@@ -47,6 +46,7 @@ gl_uniform_matrix4fv* glUniformMatrix4fv;
 gl_buffer_sub_data* glBufferSubData;
 gl_tex_storage_3d* glTexStorage3D;
 gl_tex_sub_image_3d* glTexSubImage3D;
+gl_generate_mipmap* glGenerateMipmap;
 gl_uniform_block_binding* glUniformBlockBinding;
 gl_get_uniform_block_index* glGetUniformBlockIndex;
 gl_bind_buffer_range* glBindBufferRange;
@@ -57,6 +57,13 @@ gl_bind_framebuffer* glBindFramebuffer;
 gl_check_framebuffer_status* glCheckFramebufferStatus;
 gl_framebuffer_texture* glFramebufferTexture;
 gl_copy_image_subdata* glCopyImageSubData;
+gl_tex_image_2d_multisample* glTexImage2DMultisample;
+gl_render_buffer_storage_multisample* glRenderbufferStorageMultisample;
+
+gl_gen_renderbuffers* glGenRenderbuffers;
+gl_bind_renderbuffer* glBindRenderbuffer;
+gl_framebuffer_renderbuffer* glFramebufferRenderbuffer;
+gl_blit_framebuffer* glBlitFramebuffer;
 
 gl_get_debug_message_log* glGetDebugMessageLog;
 
@@ -142,6 +149,7 @@ static bool loadGLCoreFunctions() {
   if(!(glBufferSubData = (gl_buffer_sub_data*) getWin32GLFunc("glBufferSubData")) ){return false;}    
   if(!(glTexStorage3D = (gl_tex_storage_3d*) getWin32GLFunc("glTexStorage3D")) ){return false;}
   if(!(glTexSubImage3D = (gl_tex_sub_image_3d*) getWin32GLFunc("glTexSubImage3D")) ){return false;}
+  if(!(glGenerateMipmap = (gl_generate_mipmap*) getWin32GLFunc("glGenerateMipmap")) ){return false;}
   if(!(glUniformBlockBinding = (gl_uniform_block_binding*) getWin32GLFunc("glUniformBlockBinding")) ){return false;}
   if(!(glGetUniformBlockIndex = (gl_get_uniform_block_index*) getWin32GLFunc("glGetUniformBlockIndex")) ){return false;}
   if(!(glBindBufferRange = (gl_bind_buffer_range*) getWin32GLFunc("glBindBufferRange")) ){return false;}
@@ -151,7 +159,14 @@ static bool loadGLCoreFunctions() {
   if(!(glCheckFramebufferStatus = (gl_check_framebuffer_status*) getWin32GLFunc("glCheckFramebufferStatus")) ){return false;}
   if (!(glFramebufferTexture = (gl_framebuffer_texture*)getWin32GLFunc("glFramebufferTexture"))){ return false; }
   if (!(glCopyImageSubData = (gl_copy_image_subdata*)getWin32GLFunc("glCopyImageSubData"))){ return false; }
+  if (!(glTexImage2DMultisample = (gl_tex_image_2d_multisample*)getWin32GLFunc("glTexImage2DMultisample"))){ return false; }
   if (!(glGetDebugMessageLog = (gl_get_debug_message_log*)getWin32GLFunc("glGetDebugMessageLog"))){ return false; }
+  if (!(glGenRenderbuffers = (gl_gen_renderbuffers*)getWin32GLFunc("glGenRenderbuffers"))){ return false; }
+  if (!(glBindRenderbuffer = (gl_bind_renderbuffer*)getWin32GLFunc("glBindRenderbuffer"))){ return false; }
+  if (!(glRenderbufferStorageMultisample = (gl_renderbuffer_storage_multisample*)getWin32GLFunc("glRenderbufferStorageMultisample"))){ return false; }
+  if (!(glFramebufferRenderbuffer = (gl_framebuffer_renderbuffer*)getWin32GLFunc("glFramebufferRenderbuffer"))){ return false; }
+  if (!(glBlitFramebuffer = (gl_blit_framebuffer*)getWin32GLFunc("glBlitFramebuffer"))){ return false; }
+
   return true;
 }
 
@@ -188,7 +203,7 @@ void win32InitOpenGL(HWND window) {
         wglDeleteContext(openGLRC);
         openGLRC = modernContext;
         #ifdef GL_DEBUG
-        loadDebugFunctions();
+          loadDebugFunctions();
         #endif
         if(!loadGLCoreFunctions()) {
           InvalidCodePath;
@@ -215,64 +230,7 @@ void win32InitOpenGL(HWND window) {
     InvalidCodePath;
   }
   ReleaseDC(window, windowDC);
-  globalGLInfo = checkOpenGLExtensions();
-}
-
-//Takes two strings, one for the vert shader and one for the fragment shader, 
-//returns the ID number for the linked shader
-GLuint compileShader(const char* vertSrc, const char* fragSrc) {
-  GLuint vertex, fragment, ID;
-  int success;
-     
-  vertex = glCreateShader(GL_VERTEX_SHADER);
-  glShaderSource(vertex, 1, &vertSrc, NULL);
-  glCompileShader(vertex);
-  // print compile errors if any
-  glGetShaderiv(vertex, GL_COMPILE_STATUS, &success);
-  if(!success) {
-    char buffer[512];
-    glGetShaderInfoLog(vertex, 512, NULL, buffer);
-    OutputDebugString(buffer);
-    InvalidCodePath;
-  }
-  
-  fragment = glCreateShader(GL_FRAGMENT_SHADER);
-  glShaderSource(fragment, 1, &fragSrc, NULL);
-  glCompileShader(fragment);
-  // print compile errors if any
-  glGetShaderiv(fragment, GL_COMPILE_STATUS, &success);
-  if(!success)
-  {
-    char buffer[512];
-    glGetShaderInfoLog(fragment, 512, NULL, buffer);
-    OutputDebugString(buffer);
-    InvalidCodePath;
-  }
-
-  // shader Program
-  ID = glCreateProgram();
-  glAttachShader(ID, vertex);
-  glAttachShader(ID, fragment);
-  glLinkProgram(ID);
-  // print linking errors if any
-  glGetProgramiv(ID, GL_LINK_STATUS, &success);
-  if(!success)
-  {
-    char buffer[512];
-    glGetProgramInfoLog(ID, 512, NULL, buffer);
-    OutputDebugString(buffer);
-    InvalidCodePath;
-  }
-    
-  // delete the shaders as they're linked into our program now and no longer necessery
-  glDeleteShader(vertex);
-  glDeleteShader(fragment);
-  return ID;
-}
-
-void diagnoseFramebuffer(GLenum t) {
-GLenum check = glCheckFramebufferStatus(t);
-  if(check != GL_FRAMEBUFFER_COMPLETE) {
-    //InvalidCodePath;
-  }
+  #if GL_DEBUG
+    globalGLInfo = checkOpenGLExtensions();
+  #endif
 }

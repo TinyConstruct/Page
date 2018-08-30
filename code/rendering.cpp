@@ -14,6 +14,32 @@
 
 #include "rendering.h"
 
+const char* screenQuadVertSrc = R"FOO(
+#version 450 core
+layout (location = 0) in vec2 aPos;
+layout (location = 1) in vec2 aTexCoords;
+out vec2 TexCoords;
+
+void main() {
+    TexCoords = aTexCoords;
+    gl_Position = vec4(aPos.x, aPos.y, 0.0, 1.0); 
+}  
+)FOO";
+
+const char* screenQuadFragSrc = R"FOO(
+#version 450 core
+in vec2 TexCoords;
+out vec4 FragColor;
+uniform sampler2D screenTexture;
+
+void main(){
+    vec3 col = texture(screenTexture, TexCoords).rgb;
+
+    FragColor = vec4(col, 1.0);
+} 
+)FOO";
+
+
 const char* vertexSourceUBUF = R"FOO(
 #version 450 core
 layout (location = 0) in vec3 position;
@@ -88,50 +114,39 @@ layout(std140) uniform GlobalMatrices {
 
 out vec4 resultColor;
 
-/*
-float shadowCalculation(vec4 fragPosLightSpace, float bias) {
-    // perform perspective divide
-    vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
-    // transform to [0,1] range
-    projCoords = projCoords * 0.5 + 0.5;
-    // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
-    float closestDepth = texture(depthMap, projCoords.xy).r; 
-    // get depth of current fragment from light's perspective
-    float currentDepth = projCoords.z;
-    // check whether current frag pos is in shadow
-    //float shadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0;
-// PCF
-    float shadow = 0.0;
-    vec2 texelSize = 1.0 / textureSize(depthMap, 0);
-    for(int x = -1; x <= 1; ++x) {
-      for(int y = -1; y <= 1; ++y) {
-        float pcfDepth = texture(depthMap, projCoords.xy + vec2(x, y) * texelSize).r; 
-        shadow += currentDepth - bias > pcfDepth  ? 1.0 : 0.0;        
-      }    
-    }
-    shadow /= 9.0;
-    
-    // keep the shadow at 0.0 when outside the far_plane region of the light's frustum.
-    if(projCoords.z > 1.0){
-      shadow = 0.0;
-    }
-        
-    return shadow;
-}  
-*/
+vec3 sampleOffsetDirections[20] = vec3[]
+(
+   vec3( 1,  1,  1), vec3( 1, -1,  1), vec3(-1, -1,  1), vec3(-1,  1,  1), 
+   vec3( 1,  1, -1), vec3( 1, -1, -1), vec3(-1, -1, -1), vec3(-1,  1, -1),
+   vec3( 1,  1,  0), vec3( 1, -1,  0), vec3(-1, -1,  0), vec3(-1,  1,  0),
+   vec3( 1,  0,  1), vec3(-1,  0,  1), vec3( 1,  0, -1), vec3(-1,  0, -1),
+   vec3( 0,  1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0,  1, -1)
+);  
 
 float shadowCubeCalculation(vec3 fragPos) {
   // get vector between fragment position and light position
     vec3 fragToLight = fragPos - lightPos;
     // use the light to fragment vector to sample from the depth map    
-    float closestDepth = texture(depthCubeMap, fragToLight).r;
+    //float closestDepth = texture(depthCubeMap, fragToLight).r;
     // it is currently in linear range between [0,1]. Re-transform back to original value
-    closestDepth *= far_plane;
+    //closestDepth *= far_plane;
     // now get current linear depth as the length between the fragment and light position
     float currentDepth = length(fragToLight);
     // now test for shadows
-    float bias = 0.05; 
-    float shadow = currentDepth -  bias > closestDepth ? 1.0 : 0.0;
+    
+    float shadow = 0.0;
+    float bias   = 0.15;
+    int samples  = 20;
+    float viewDistance = length(playerPos - fragPos);
+    float diskRadius = (1.0 + (viewDistance / far_plane)) / 25.0;
+    for(int i = 0; i < samples; ++i)
+    {
+      float closestDepth = texture(depthCubeMap, fragToLight + sampleOffsetDirections[i] * diskRadius).r;
+      closestDepth *= far_plane;   // Undo mapping [0;1]
+      if(currentDepth - bias > closestDepth)
+        shadow += 1.0;
+    }
+    shadow /= float(samples);
 
     return shadow;
 }
@@ -144,7 +159,9 @@ void main()
   
   vec3 lightColor = vec3(0.9);
 
-
+  //attenuated for light distance of 160
+  float distance = length(lightPos - fragPos);
+  float attenuation = 1.0 / (1.0 + 0.14 * distance +  0.07 * (distance * distance));   
 
   // ambient
   vec3 ambient = 0.1 * texColor;
@@ -159,12 +176,13 @@ void main()
   float spec = pow(max(dot(normal, halfwayDir), 0.0), 64.0);
   vec3 specular = 0.2 * spec * lightColor;    
   float shadow = shadowCubeCalculation(fragPos);
+  attenuation = 1.0;
+  ambient  *= attenuation; 
+  diffuse  *= attenuation;
+  specular *= attenuation;   
+
 resultColor = vec4((ambient + (diffuse + specular) * (1-shadow)), 1.0);
 
-//vec3 fragToLight = fragPos - lightPos;
-// use the light to fragment vector to sample from the depth map    
-//float closestDepth = texture(depthCubeMap, fragToLight).r;
-//resultColor = vec4(vec3(closestDepth), 1.0);
 
 }
 )FOO";
@@ -220,7 +238,7 @@ void main()
 }  
 )FOO";
 
-const char* depthCubeMapGeoSource= R"FOO(
+const char* depthCubeMapGeoSource = R"FOO(
 #version 450 core
 layout (triangles) in;
 layout (triangle_strip, max_vertices=18) out;
@@ -405,11 +423,33 @@ void compileShader(GLuint* shaderID, const char* vSrc, const char* fSrc, const c
 }
 
 void Renderer::initialize() {
+  float quadVertices[] = {   // vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.
+  // positions   // texCoords
+  -1.0f,  1.0f,  0.0f, 1.0f,
+  -1.0f, -1.0f,  0.0f, 0.0f,
+  1.0f, -1.0f,  1.0f, 0.0f,
+
+  -1.0f,  1.0f,  0.0f, 1.0f,
+  1.0f, -1.0f,  1.0f, 0.0f,
+  1.0f,  1.0f,  1.0f, 1.0f
+  };
+  glGenFramebuffers(1, &mainFrameBuffer);
+  glBindFramebuffer(GL_FRAMEBUFFER, mainFrameBuffer);
+  glGenVertexArrays(1, &quadVAO);
+  glGenBuffers(1, &quadVBO);
+  glBindVertexArray(quadVAO);
+  glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+  glEnableVertexAttribArray(1);
+  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+
   compileShader(&shaderID, vertexSourceUBUF, fragmentSource);
+  compileShader(&screenShaderID, screenQuadVertSrc, screenQuadFragSrc);
   GLuint uniformBlockIndex = glGetUniformBlockIndex(shaderID, "GlobalMatrices");
   glUniformBlockBinding(shaderID, uniformBlockIndex, 0);
   compileShader(&shadowShaderID, depthCubeMapVertSource, depthCubeMapFragSource, depthCubeMapGeoSource);
-  GLuint vao;
   glGenVertexArrays(1, &vao);  
   glBindVertexArray(vao);
     
@@ -466,7 +506,7 @@ void Renderer::initialize() {
     debugPlayerElements.push_back(7);
     debugPlayerElements.push_back(7);
     debugPlayerElements.push_back(4);
-    debugPlayerElements.push_back(4);
+    debugPlayerElements.push_back(4);\
     debugPlayerElements.push_back(0);
     debugPlayerElements.push_back(7);
     debugPlayerElements.push_back(3);
@@ -509,7 +549,7 @@ void Renderer::initialize() {
   glDrawBuffer(GL_NONE);
   glReadBuffer(GL_NONE);
 
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);  
+  glBindFramebuffer(GL_FRAMEBUFFER, mainFrameBuffer);  
 
   pointShadowProjMatFarPlane = 30.0f;
   aroPerspective(pointShadowProjMat, 90.0f, SHADOW_ASPECT, 0.5f, pointShadowProjMatFarPlane);
@@ -522,12 +562,88 @@ void Renderer::initialize() {
   glCullFace(GL_BACK);
   glEnable(GL_CULL_FACE);
 
+// MSAA setup
+  quadFramebuffer = 0;
+  numMSAASamples = 4;
+
+  glBindFramebuffer(GL_FRAMEBUFFER, mainFrameBuffer); 
+
+  glGenTextures(1, &multisampleTextureLocation);
+  glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, multisampleTextureLocation);
+  glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, numMSAASamples, GL_RGB, windowDimensions.width, windowDimensions.height, GL_TRUE);
+  glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, 0);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, multisampleTextureLocation, 0);
+  
+  glGenRenderbuffers(1, &multisampleRBO);
+  glBindRenderbuffer(GL_RENDERBUFFER, multisampleRBO);
+  glRenderbufferStorageMultisample(GL_RENDERBUFFER, numMSAASamples, GL_DEPTH24_STENCIL8, windowDimensions.width, windowDimensions.height);
+  glBindRenderbuffer(GL_RENDERBUFFER, 0);
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, multisampleRBO);
+
+  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    InvalidCodePath;
+
+  //post-processing framebuffer
+  glGenFramebuffers(1, &intermediateFBO);
+  glBindFramebuffer(GL_FRAMEBUFFER, intermediateFBO);
+  // create a color attachment texture
+  
+  glGenTextures(1, &screenQuadTexture);
+  glBindTexture(GL_TEXTURE_2D, screenQuadTexture);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, windowDimensions.width, windowDimensions.height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, screenQuadTexture, 0);  // we only need a color buffer
+
+  glBindFramebuffer(GL_FRAMEBUFFER, mainFrameBuffer);
+
+  glUseProgram(screenShaderID);
+  multisampleTextureLocation = glGetUniformLocation(screenShaderID, "screenTexture");
+  glUniform1i(multisampleTextureLocation, 0);
+
+  glUseProgram(shaderID);
   wglSwapInterval(1);
 }
 
+void Renderer::reconfigureMSAA() {
+  glBindFramebuffer(GL_FRAMEBUFFER, mainFrameBuffer); 
+
+  glGenTextures(1, &multisampleTextureLocation);
+  glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, multisampleTextureLocation);
+  glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, numMSAASamples, GL_RGB, windowDimensions.width, windowDimensions.height, GL_TRUE);
+  glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, 0);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, multisampleTextureLocation, 0);
+  
+  glGenRenderbuffers(1, &multisampleRBO);
+  glBindRenderbuffer(GL_RENDERBUFFER, multisampleRBO);
+  glRenderbufferStorageMultisample(GL_RENDERBUFFER, numMSAASamples, GL_DEPTH24_STENCIL8, windowDimensions.width, windowDimensions.height);
+  glBindRenderbuffer(GL_RENDERBUFFER, 0);
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, multisampleRBO);
+
+  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    InvalidCodePath;
+
+  //post-processing framebuffer
+  glGenFramebuffers(1, &intermediateFBO);
+  glBindFramebuffer(GL_FRAMEBUFFER, intermediateFBO);
+  // create a color attachment texture
+  
+  glGenTextures(1, &screenQuadTexture);
+  glBindTexture(GL_TEXTURE_2D, screenQuadTexture);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, windowDimensions.width, windowDimensions.height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, screenQuadTexture, 0);  // we only need a color buffer
+
+  glBindFramebuffer(GL_FRAMEBUFFER, mainFrameBuffer);
+
+  glUseProgram(screenShaderID);
+  multisampleTextureLocation = glGetUniformLocation(screenShaderID, "screenTexture");
+  glUniform1i(multisampleTextureLocation, 0);
+}
+// 3.2 0.5 -1.6
 void Renderer::renderPointLights(PointLightArray* plr){
   glUseProgram(shadowShaderID);
-  //assert(lightNum < plr->numLights);
   for(int i = 0; i<plr->numLights; i++){
     GLuint lightTexid = plr->lightTexIds[i];
     GLuint lightFBOid = plr->lightFBOIds[i];
@@ -560,7 +676,7 @@ void Renderer::renderPointLights(PointLightArray* plr){
     glClear(GL_DEPTH_BUFFER_BIT|GL_COLOR_BUFFER_BIT);
     glDrawElements(GL_TRIANGLES, levelElements.size(), GL_UNSIGNED_INT, 0);
   }
-
+  glBindFramebuffer(GL_FRAMEBUFFER, mainFrameBuffer);  
 }
 
 void Renderer::addPointLight(PointLightArray* array, v3 position) {
@@ -588,17 +704,19 @@ void Renderer::addPointLight(PointLightArray* array, v3 position) {
   glDrawBuffer(GL_NONE);
   glReadBuffer(GL_NONE);
   //diagnoseFramebuffer(array->lightFBOIds[n]);
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);  
+  glBindFramebuffer(GL_FRAMEBUFFER, mainFrameBuffer);  
 }
 
 void Renderer::draw() {
   glClearColor(1.0f, 0.0f, 1.0f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        
+  glBindFramebuffer(GL_FRAMEBUFFER, mainFrameBuffer);  
+
+  glBindVertexArray(vao);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo);
+
   //Render for directional light shadow map
   //glCullFace(GL_FRONT);
-  glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
-  glClear(GL_DEPTH_BUFFER_BIT);
   /*
   m4x4 lightProjection;
   getOrthoProjMatrix(-10.0f, 10.0f, -10.0f, 10.0f, .25f, 20.0f, lightProjection);
@@ -630,7 +748,6 @@ void Renderer::draw() {
   //Normal render
   //glCullFace(GL_BACK);
   glClearColor(1.0,0.0,1.0,1.0);
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);  
   glViewport(0, 0, windowDimensions.width, windowDimensions.height);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -680,10 +797,11 @@ void Renderer::draw() {
   //glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(m4x4), lightView.n);
   //glBufferSubData(GL_UNIFORM_BUFFER, sizeof(m4x4), sizeof(m4x4), lightProjection.n);
 
-  glCopyImageSubData(pointLights.lightTexIds[0], GL_TEXTURE_CUBE_MAP, 0, 0, 0, 5, 
-    depthMap, GL_TEXTURE_2D, 0, 0, 0, 0, SHADOW_WIDTH, SHADOW_HEIGHT, 1);
+  //glCopyImageSubData(pointLights.lightTexIds[0], GL_TEXTURE_CUBE_MAP, 0, 0, 0, 5, 
+  //  depthMap, GL_TEXTURE_2D, 0, 0, 0, 0, SHADOW_WIDTH, SHADOW_HEIGHT, 1);
   
   glDrawElements(GL_TRIANGLES, levelElements.size(), GL_UNSIGNED_INT, 0);
+  
   #if DEBUG_BUILD
     if(renderDebug){
       glUseProgram(debugShaderID);
@@ -703,6 +821,26 @@ void Renderer::draw() {
       glDrawElements(GL_LINES, debugBoundingElements.size(), GL_UNSIGNED_INT, 0);
     }
   #endif
+
+  // 2. blit to normal colorbuffer of intermediate FBO
+  glBindFramebuffer(GL_READ_FRAMEBUFFER, mainFrameBuffer);
+  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, intermediateFBO);
+  glBlitFramebuffer(0, 0, windowDimensions.width, windowDimensions.height, 0, 0, windowDimensions.width, windowDimensions.height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+
+  // 3. now render quad with scene's visuals as its texture image
+  glBindFramebuffer(GL_FRAMEBUFFER, quadFramebuffer);
+  glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+  glClear(GL_COLOR_BUFFER_BIT);
+  glDisable(GL_DEPTH_TEST);
+
+  // draw Screen quad
+  glUseProgram(screenShaderID);
+  glBindVertexArray(quadVAO);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, screenQuadTexture); // use the now resolved color attachment as the quad's texture
+  glDrawArrays(GL_TRIANGLES, 0, 6);
+
+  glEnable(GL_DEPTH_TEST);
 }
 
 void Renderer::addDebugVolume(const v3& center, const v3& rad) {
@@ -853,11 +991,12 @@ void Renderer::addPlayerDebugVolume(v3& center, v3 axes[3], v3& halfW) {
 }
 
 GLuint loadTexture(Texture* texture, char* bmpPath) {
+  //NOTE: this is the old, non-array way of doing this
   GLuint texID;
   glGenTextures(1, &texID);
   glBindTexture(GL_TEXTURE_2D, texID);
-  //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
@@ -886,10 +1025,11 @@ GLuint Renderer::createTextureArrayBuffer(int width, int height) {
   GLuint texID;
   glGenTextures(1, &texID);
   glBindTexture(GL_TEXTURE_2D_ARRAY, texID);
-  glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_RGBA8, width, height, layerCount);
+  //Note: currently using 4 mipmap levels
+  glTexStorage3D(GL_TEXTURE_2D_ARRAY, 4, GL_RGBA8, width, height, layerCount);
   glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
   glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
-  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
   glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   return texID;
 }
@@ -935,6 +1075,7 @@ void Renderer::loadTextureArray512(TextureHandle texTable[],int aID, char* aPath
     texTable[dID].texLayer = 3;
   }
   glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, 0, 512, 512, 4, GL_BGRA_EXT, GL_UNSIGNED_BYTE, buffer);
+  glGenerateMipmap(GL_TEXTURE_2D_ARRAY);
   VirtualFree(buffer, 0, MEM_RELEASE);
 }
 

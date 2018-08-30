@@ -24,5 +24,7 @@ struct FileReadResult {
 FileReadResult readWholeFile(char* fileName);
 Bitmap loadBMP(char* fileName);
 bool freeBMP(Bitmap* bitmap);
+void clipMouseToWindow(HWND& window);
+void unclipMouse();
 
 #endif // __ARO_PLATFORM__

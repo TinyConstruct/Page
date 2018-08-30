@@ -125,18 +125,9 @@ void LevelData::finalizeQuads() {
 }
 
 void LevelData::bakeTestLevel() {
-  //add a bunch of geometry to a buffer: (quad,TEX_NUM)...
-  
-  //addTexturedQuad(V3(-20.0, 0.0, -20.0), V3(-20.0, 0.0, 20.0), V3(20.0, 0.0, 20.0), V3(20.0, 0.0, -20.0),  FLOOR1);
-  //addTexturedQuad(V3(-20.0, 6.0, -20.0), V3(20.0, 6.0, -20.0), V3(20.0, 6.0, 20.0), V3(-20.0, 6.0, 20.0),  CEIL1);
-  //addTexturedQuad(V3(-1.5, 3.0, -5.0), V3(-1.5, 0.0, -5.0), V3(1.5, 0.0, -5.0), V3(1.5, 3.0, -5.0),  WALL2);
-  //addTexturedQuad(V3(-3.5, 3.0, -3.0), V3(-3.5, 3.0, 0.0), V3(0.0, 1.0, 0.0), V3(0.0, 1.0, -3.0),  WALL2);
+  //First, read 
   loadLevelFromTextFile("data/dungeon1.dat");
-  //other buffer: (tri, TEX_NUM)
-  //sort on getGLTexID(TEX_NUM) for both buffers
-  //send quads/tris to renderer
   finalizeQuads();
-  //send quads/tris to LevelGeometry for bounding boxes
 }
 
 void LevelData::preLoadTextureArray512(int numTexes, char* tex1, char* tex2, char* tex3, char* tex4, bool hasNormalMap) {
@@ -327,6 +318,7 @@ void LevelData::loadLevelFromTextFile(char* path) {
     TexturedQuad q = (*qs)[i];
     addTexturedQuad(q);
   }
+  VirtualFree(r.contents, 0, MEM_RELEASE);
 }
 
 int isColliding(OBB& a, OBB& b) {

@@ -1,7 +1,7 @@
 #ifndef __ARO_OPENGL__
 #define __ARO_OPENGL__
 
-//#define GL_DEBUG 1
+#define GL_DEBUG 1
 
 //These are windows specific
 #define WGL_CONTEXT_MAJOR_VERSION               0x2091
@@ -60,7 +60,6 @@
 #define GL_COMPILE_STATUS                         0x8B81
 #define GL_LINK_STATUS                            0x8B82
 
-
 #define GL_TEXTURE_2D_ARRAY                       0x8C1A
 #define GL_MAX_ARRAY_TEXTURE_LAYERS               0x88FF
 #define GL_MAX_TEXTURE_IMAGE_UNITS                0x8872
@@ -108,12 +107,58 @@
 #define GL_TEXTURE30                              0x84DE
 #define GL_TEXTURE31                              0x84DF
 
-#define GL_CLAMP_TO_EDGE                          0x812F
-#define GL_FRAMEBUFFER                            0x8D40
-#define GL_DEPTH_ATTACHMENT                       0x8D00
-#define GL_DEPTH_COMPONENT32                      0x81A7
-#define GL_FRAMEBUFFER_SRGB                       0x8DB9
-#define GL_GEOMETRY_SHADER                        0x8DD9
+#define GL_COLOR_ATTACHMENT0              0x8CE0
+#define GL_COLOR_ATTACHMENT1              0x8CE1
+#define GL_COLOR_ATTACHMENT2              0x8CE2
+#define GL_COLOR_ATTACHMENT3              0x8CE3
+#define GL_COLOR_ATTACHMENT4              0x8CE4
+#define GL_COLOR_ATTACHMENT5              0x8CE5
+#define GL_COLOR_ATTACHMENT6              0x8CE6
+#define GL_COLOR_ATTACHMENT7              0x8CE7
+#define GL_COLOR_ATTACHMENT8              0x8CE8
+#define GL_COLOR_ATTACHMENT9              0x8CE9
+#define GL_COLOR_ATTACHMENT10             0x8CEA
+#define GL_COLOR_ATTACHMENT11             0x8CEB
+#define GL_COLOR_ATTACHMENT12             0x8CEC
+#define GL_COLOR_ATTACHMENT13             0x8CED
+#define GL_COLOR_ATTACHMENT14             0x8CEE
+#define GL_COLOR_ATTACHMENT15             0x8CEF
+#define GL_COLOR_ATTACHMENT16             0x8CF0
+#define GL_COLOR_ATTACHMENT17             0x8CF1
+#define GL_COLOR_ATTACHMENT18             0x8CF2
+#define GL_COLOR_ATTACHMENT19             0x8CF3
+#define GL_COLOR_ATTACHMENT20             0x8CF4
+#define GL_COLOR_ATTACHMENT21             0x8CF5
+#define GL_COLOR_ATTACHMENT22             0x8CF6
+#define GL_COLOR_ATTACHMENT23             0x8CF7
+#define GL_COLOR_ATTACHMENT24             0x8CF8
+#define GL_COLOR_ATTACHMENT25             0x8CF9
+#define GL_COLOR_ATTACHMENT26             0x8CFA
+#define GL_COLOR_ATTACHMENT27             0x8CFB
+#define GL_COLOR_ATTACHMENT28             0x8CFC
+#define GL_COLOR_ATTACHMENT29             0x8CFD
+#define GL_COLOR_ATTACHMENT30             0x8CFE
+#define GL_COLOR_ATTACHMENT31             0x8CFF
+
+#define GL_CLAMP_TO_EDGE                  0x812F
+#define GL_FRAMEBUFFER                    0x8D40
+#define GL_READ_FRAMEBUFFER               0x8CA8
+#define GL_DRAW_FRAMEBUFFER               0x8CA9
+#define GL_DEPTH_ATTACHMENT               0x8D00
+#define GL_DEPTH_COMPONENT32              0x81A7
+#define GL_FRAMEBUFFER_SRGB               0x8DB9
+#define GL_GEOMETRY_SHADER                0x8DD9
+
+#define GL_RENDERBUFFER                   0x8D41
+#define GL_DEPTH24_STENCIL8               0x88F0
+#define GL_DEPTH_STENCIL_ATTACHMENT       0x821A
+#define GL_MULTISAMPLE                    0x809D
+#define GL_SAMPLE_ALPHA_TO_COVERAGE       0x809E
+#define GL_SAMPLE_ALPHA_TO_ONE            0x809F
+#define GL_SAMPLE_COVERAGE                0x80A0
+#define GL_SAMPLE_BUFFERS                 0x80A8
+#define GL_SAMPLES                        0x80A9
+#define GL_TEXTURE_2D_MULTISAMPLE         0x9100
 
 typedef ptrdiff_t GLsizeiptr;
 
@@ -176,6 +221,7 @@ typedef void WINAPI gl_buffer_sub_data  (GLenum target, GLintptr offset, GLsizei
 typedef void WINAPI gl_debug_message_callback_arb (void* callback, void * userParam);
 typedef void WINAPI gl_tex_storage_3d (GLenum target, GLsizei levels, GLenum internalformat, GLsizei width, GLsizei height, GLsizei depth);
 typedef void WINAPI gl_tex_sub_image_3d (GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLenum type, const void *pixels);
+typedef void WINAPI gl_generate_mipmap (GLenum target);
 typedef void WINAPI gl_bind_buffer_range (GLenum target, GLuint index, GLuint buffer, GLintptr offset, GLsizeiptr size);
 typedef void WINAPI gl_gen_framebuffers (GLsizei n, GLuint *framebuffers);
 typedef void WINAPI gl_framebuffer_texture2D (GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
@@ -183,6 +229,14 @@ typedef void WINAPI gl_bind_framebuffer (GLenum target, GLuint framebuffer);
 typedef GLenum WINAPI gl_check_framebuffer_status (GLenum target);
 typedef void WINAPI gl_framebuffer_texture (GLenum target, GLenum attachment, GLuint texture, GLint level);
 typedef void WINAPI gl_copy_image_subdata (GLuint srcName, GLenum srcTarget, GLint srcLevel, GLint srcX, GLint srcY, GLint srcZ, GLuint dstName, GLenum dstTarget, GLint dstLevel, GLint dstX, GLint dstY, GLint dstZ, GLsizei srcWidth, GLsizei srcHeight, GLsizei srcDepth);
+typedef void WINAPI gl_tex_image_2d_multisample (GLenum target, GLsizei samples, GLenum internalformat, GLsizei width, GLsizei height, GLboolean fixedsamplelocations);
+typedef void WINAPI gl_render_buffer_storage_multisample(GLenum target, GLsizei samples, GLenum internalformat, GLsizei width, GLsizei height);
+
+typedef void WINAPI gl_gen_renderbuffers (GLsizei n, GLuint *renderbuffers);
+typedef void WINAPI gl_bind_renderbuffer (GLenum target, GLuint renderbuffer);
+typedef void WINAPI gl_renderbuffer_storage_multisample (GLenum target, GLsizei samples, GLenum internalformat, GLsizei width, GLsizei height);
+typedef void WINAPI gl_framebuffer_renderbuffer (GLenum target, GLenum attachment, GLenum renderbuffertarget, GLuint renderbuffer);
+typedef void WINAPI gl_blit_framebuffer (GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1, GLint dstX0, GLint dstY0, GLint dstX1, GLint dstY1, GLbitfield mask, GLenum filter);
 
 
 typedef void WINAPI gl_uniform_block_binding (GLuint program, GLuint uniformBlockIndex, GLuint uniformBlockBinding);
@@ -231,6 +285,7 @@ extern gl_uniform_matrix4fv* glUniformMatrix4fv;
 extern gl_buffer_sub_data* glBufferSubData;
 extern gl_tex_storage_3d* glTexStorage3D;
 extern gl_tex_sub_image_3d* glTexSubImage3D;
+extern gl_generate_mipmap* glGenerateMipmap;
 extern gl_uniform_block_binding* glUniformBlockBinding;
 extern gl_get_uniform_block_index* glGetUniformBlockIndex;
 extern gl_bind_buffer_range* glBindBufferRange;
@@ -241,9 +296,14 @@ extern gl_framebuffer_texture2D* glFramebufferTexture2D;
 extern gl_bind_framebuffer* glBindFramebuffer;
 extern gl_framebuffer_texture* glFramebufferTexture;
 extern gl_copy_image_subdata* glCopyImageSubData;
-
+extern gl_tex_image_2d_multisample* glTexImage2DMultisample;
 extern gl_get_debug_message_log* glGetDebugMessageLog;
 
+extern gl_gen_renderbuffers* glGenRenderbuffers;
+extern gl_bind_renderbuffer* glBindRenderbuffer;
+extern gl_renderbuffer_storage_multisample* glRenderbufferStorageMultisample;
+extern gl_framebuffer_renderbuffer* glFramebufferRenderbuffer;
+extern gl_blit_framebuffer* glBlitFramebuffer;
+
 void win32InitOpenGL(HWND window);
-void diagnoseFramebuffer(GLenum t);
 #endif //__ARO_OPENGL__

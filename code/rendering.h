@@ -49,15 +49,19 @@ struct PointLightArray {
 class Renderer {
 public:
   Win32WindowDimensions windowDimensions;
+  bool clipMouse;
   m4x4 pointShadowProjMat;
   float pointShadowProjMatFarPlane;
   GLuint depthMapFBO;
   GLuint depthMap;
   TextureHandle texTable[MAX_TEX];
   TextureHandle texNormTable[N_MAX_TEX];
-  GLuint textureLocation, normTextureLocation, depthMapTextureLocation, depthCubeMapLocation;
-  GLuint vbo, ebo, uniformBuffer;
-  GLuint shaderID, shadowShaderID;
+  GLuint textureLocation, normTextureLocation, depthMapTextureLocation, depthCubeMapLocation, multisampleTextureLocation;
+  GLuint vao, vbo, ebo, uniformBuffer, multisampleRBO, intermediateFBO;
+  GLuint mainFrameBuffer, quadFramebuffer, screenQuadTexture;
+  GLuint quadVAO, quadVBO;
+  GLsizei numMSAASamples;
+  GLuint shaderID, shadowShaderID, screenShaderID;
   v3 globalLight;
   PointLightArray pointLights;
   float aspectRatio;
@@ -87,6 +91,7 @@ public:
   void debugDrawLine(v3& start, v3& end);
   void addPointLight(PointLightArray* array, v3 position);
   void renderPointLights(PointLightArray* plr);
+  void reconfigureMSAA();
 };
 
 
