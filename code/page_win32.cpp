@@ -175,11 +175,14 @@ win32MainWindowCallback(HWND window, UINT message, WPARAM WParam, LPARAM LParam)
         if(renderer.clipMouse) {
           clipMouseToWindow(globalWindowHandle);
         }
-          //re-create multisample texture
-          glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, renderer.multisampleTextureLocation);
-          glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, 4, GL_RGB, renderer.windowDimensions.width, renderer.windowDimensions.height, GL_TRUE);
-          glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, 0);
-          glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, renderer.multisampleTextureLocation, 0);
+		if (renderer.initDone) {
+			//re-create multisample texture
+			//glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, renderer.multisampleTextureLocation);
+			//glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, 4, GL_RGB, renderer.windowDimensions.width, renderer.windowDimensions.height, GL_TRUE);
+			//glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, 0);
+			//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, renderer.multisampleTextureLocation, 0);
+      renderer.reconfigureMSAA();
+		}
       }
       case WM_MOVE: {
         renderer.windowDimensions = win32GetWindowDimension(window);
@@ -214,6 +217,7 @@ int CALLBACK
 WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showCode) {
   srand((unsigned int)time(NULL));
   renderer.clipMouse = FALSE;
+  renderer.initDone = FALSE;
   WNDCLASS windowClass = {};
   windowClass.style = CS_HREDRAW|CS_VREDRAW|CS_OWNDC;
   windowClass.lpfnWndProc = win32MainWindowCallback;
@@ -245,7 +249,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
 
       win32InitOpenGL(globalWindowHandle); //find a pixel format, wglCreateContext, etc.
       //All OpenGL functions are now loaded. 
-
+	  renderer.initDone = TRUE;
       HDC dc = GetDC(globalWindowHandle);
       globalRunning = true;
 
@@ -337,7 +341,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
           }
         }
         else {
-          //game is paused, draw pause screen/menu/whatever
+          //game is paused, draw pause screen/menu
           if(keyboardState.cameraLock) { //camera is locked to player
             cameraPosition = V3(player.center.x, player.center.y, player.center.z) ;
             viewDir = player.viewDir;
@@ -360,9 +364,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showC
 
         renderer.draw();
         glFinish();
-        //QueryPerformanceCounter(&beginProfGL);
         SwapBuffers(dc);
-        //QueryPerformanceCounter(&endProfGL);
         char buffer[512];
         sprintf_s(buffer, "Player: %f, %f, %f\n", player.center.x, player.center.y, player.center.z);
         OutputDebugStringA(buffer);

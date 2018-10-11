@@ -109,7 +109,7 @@ v4 operator*(m4x4& m, v4 v);
 v4 operator*(m4x4& m, v3 v);
 v4 operator*(m4x4& m, p3 v);
 
-m4x4 operator*(m4x4& a, m4x4& b);
+m4x4 operator*(const m4x4& a, const m4x4& b);
 
 //Vector operations //////////////////////////////////////
 float dot(v2 a, v2 b);
@@ -124,7 +124,7 @@ m4x4 makeRotY(float t);
 m4x4 makeRotZ(float t);
 m4x4 translate(v3 v);
 m4x4 translate(m4x4& m, v3 v);
-m4x4 transpose(m4x4& a);
+m4x4 transpose(const m4x4& a);
 
 void getOrthoProjMatrix(const float &b, const float &t, const float &l, const float &r, const float &n, const float &f, m4x4& M);
 void aroInfFrustrum(const float &b, const float &t, const float &l, const float &r, const float &n, m4x4& M);
@@ -132,7 +132,7 @@ void aroFrustrum(m4x4& M, const float &left, const float &right, const float &bo
 void aroPerspective(m4x4& M, float fovy, float aspect, float near, float far);
 m4x4 aroLookatc(v3* eyePosition, v3* viewCenter);
 m4x4 aroLookatb(v3* eyePosition, v3* viewCenter);
-m4x4 aroLookat(v3 &eyePosition, v3 &viewCenter);
-m4x4 aroLookat(v3 &eyePosition, v3 &viewCenter, v3 &upInput);
+m4x4 aroLookat(const v3 &eyePosition, const v3 &viewCenter);
+m4x4 aroLookat(const v3 &eyePosition, const v3 &viewCenter, const v3 &upInput);
 
 #endif // __ARO_MATH__

@@ -440,9 +440,9 @@ void Renderer::initialize() {
   glBindVertexArray(quadVAO);
   glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
   glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
-  glEnableVertexAttribArray(0);
+  glEnableVertexAttribArray(0); //screen quad corners
   glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-  glEnableVertexAttribArray(1);
+  glEnableVertexAttribArray(1); //screen quad UVs
   glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
 
   compileShader(&shaderID, vertexSourceUBUF, fragmentSource);
@@ -467,12 +467,6 @@ void Renderer::initialize() {
   GLint posAttrib = glGetAttribLocation(shaderID, "position");
   glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertpcnu), 0);
   glEnableVertexAttribArray(posAttrib);
-  //GLint color = glGetAttribLocation(shaderID, "color");
-  //glVertexAttribPointer(color, 3, GL_FLOAT, GL_FALSE, sizeof(Vertpcnu), (void*)(sizeof(v3)));
-  //glEnableVertexAttribArray(color);
-  //GLint normal = glGetAttribLocation(shaderID, "normal");
-  //glVertexAttribPointer(normal, 3, GL_FLOAT, GL_FALSE, sizeof(Vertpcnu), (void*)(sizeof(v3)*2));
-  //glEnableVertexAttribArray(normal);
   GLint texCoord = glGetAttribLocation(shaderID, "texCoordIn");
   glVertexAttribPointer(texCoord, 3, GL_FLOAT, GL_FALSE, sizeof(Vertpcnu), (void*)(sizeof(v3)*3));
   glEnableVertexAttribArray(texCoord);
@@ -544,8 +538,7 @@ void Renderer::initialize() {
   glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
   
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
-  //glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthMap, 0);
-
+  
   glDrawBuffer(GL_NONE);
   glReadBuffer(GL_NONE);
 
@@ -557,6 +550,7 @@ void Renderer::initialize() {
   //end shadowmap setup
 
   addPointLight(&pointLights, globalLight);
+  //addPointLight(&pointLights, globalLight);
 
   glEnable(GL_DEPTH_TEST);
   glCullFace(GL_BACK);
@@ -598,8 +592,7 @@ void Renderer::initialize() {
   glBindFramebuffer(GL_FRAMEBUFFER, mainFrameBuffer);
 
   glUseProgram(screenShaderID);
-  multisampleTextureLocation = glGetUniformLocation(screenShaderID, "screenTexture");
-  glUniform1i(multisampleTextureLocation, 0);
+  glUniform1i(glGetUniformLocation(screenShaderID, "screenTexture"), 0);
 
   glUseProgram(shaderID);
   wglSwapInterval(1);
@@ -1137,7 +1130,7 @@ void Renderer::addTri(Vertpcnu& a, Vertpcnu& b, Vertpcnu& c) {
   levelElements.push_back(index++);
 }
 
-void Renderer::debugDrawLine(v3& start, v3& end) {
+void Renderer::debugDrawLine(const v3& start, const v3& end) {
   int startingIndex = debugBoundingVerts.size();
   debugBoundingVerts.push_back(start);
   debugBoundingVerts.push_back(end);

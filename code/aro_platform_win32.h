@@ -21,7 +21,7 @@ struct FileReadResult {
   void *contents;
 };
 
-FileReadResult readWholeFile(char* fileName);
+FileReadResult readWholeFile(const char fileName[]);
 Bitmap loadBMP(char* fileName);
 bool freeBMP(Bitmap* bitmap);
 void clipMouseToWindow(HWND& window);

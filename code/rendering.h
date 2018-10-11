@@ -48,6 +48,7 @@ struct PointLightArray {
 
 class Renderer {
 public:
+  bool initDone;
   Win32WindowDimensions windowDimensions;
   bool clipMouse;
   m4x4 pointShadowProjMat;
@@ -88,7 +89,7 @@ public:
   TextureHandle getGLNormTexID(int texID);
   void addTri(Vertpcnu& a, Vertpcnu& b, Vertpcnu& c);
   void addDebugVolume(v3& center, v3 axes[3], v3& halfW);
-  void debugDrawLine(v3& start, v3& end);
+  void debugDrawLine(const v3& start, const v3& end);
   void addPointLight(PointLightArray* array, v3 position);
   void renderPointLights(PointLightArray* plr);
   void reconfigureMSAA();

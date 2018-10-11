@@ -1,12 +1,13 @@
 #include "aro_generic.h"
 
-void reportAssertionFailure(char* expr, char* file, int line) {
+void reportAssertionFailure(const char expr[], const char file[], int line) {
   //TODO: actually OutputDebugString() this? Not really needed as of writing
   return;
 }
 
 uint32_t safeTruncateUInt64(uint64_t value) {
-    assert(value <= 0xFFFFFFFF);
+	bool test = value <= 0xFFFFFFFF;
+	assert(1!=2);
     uint32_t result = (uint32_t)value;
     return(result);
 }

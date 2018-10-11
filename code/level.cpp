@@ -272,7 +272,7 @@ char* LevelData::processQuadTextLine(char* str, TexturedQuad* q) {
   return readPtr;
 }
 
-void LevelData::loadLevelFromTextFile(char* path) {
+void LevelData::loadLevelFromTextFile(const char path[]) {
   //First important line of file must start with "**"
   char texes[4][255];
   int texNum = -1;

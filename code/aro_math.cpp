@@ -389,7 +389,7 @@ v4 operator*(m4x4& m, p3 v) {
   return result;
 }
 
-m4x4 operator*(m4x4& a, m4x4& b) {
+m4x4 operator*(const m4x4& a, const m4x4& b) {
   //TODO: this is slow
   m4x4 result = M4x4(
     a.n[0][0]*b.n[0][0] + a.n[0][1]*b.n[1][0] + a.n[0][2]*b.n[2][0] + a.n[0][3]*b.n[3][0],
@@ -414,7 +414,7 @@ m4x4 operator*(m4x4& a, m4x4& b) {
   return result;
 }
 
-m4x4 transpose(m4x4& a) {
+m4x4 transpose(const m4x4& a) {
   //TODO: this is slow
   m4x4 result = M4x4(
     a.n[0][0], a.n[1][0], a.n[2][0], a.n[3][0], 
@@ -601,7 +601,7 @@ m4x4 aroLookatRowMajor(v3 &eyePosition, v3 &viewCenter)
   return result;
 }
 
-m4x4 aroLookat(v3 &eyePosition, v3 &viewCenter)
+m4x4 aroLookat(const v3 &eyePosition, const v3 &viewCenter)
 {
   m4x4 result;
   v3 forward = normalize(viewCenter - eyePosition);
@@ -627,7 +627,7 @@ m4x4 aroLookat(v3 &eyePosition, v3 &viewCenter)
   return result;
 }
 
-m4x4 aroLookat(v3 &eyePosition, v3 &viewCenter, v3 &upInput)
+m4x4 aroLookat(const v3 &eyePosition, const v3 &viewCenter, const v3 &upInput)
 {
   m4x4 result;
   v3 forward = normalize(viewCenter - eyePosition);

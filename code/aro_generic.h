@@ -21,7 +21,7 @@ const int DEBUG_BUILD = 1;
 #define InvalidCodePath assert(!1==1)
 #define megabyte(amnt) amnt*1000000
 
-void reportAssertionFailure(char* expr, char* file, int line);
+void reportAssertionFailure(const char expr[], const char file[], int line);
 unsigned int safeTruncateUInt64(uint64_t value);
 int strcmpAny(char const *s1, char const *s2);
 char* advancePointerToOnePastChar(char* str, char ch);

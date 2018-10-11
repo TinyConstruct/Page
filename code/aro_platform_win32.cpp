@@ -13,7 +13,7 @@ void unclipMouse() {
   ClipCursor(NULL);  
 }
 
-FileReadResult readWholeFile(char* fileName) {
+FileReadResult readWholeFile(const char fileName[]) {
   FileReadResult result = {};
   HANDLE fileHandle = CreateFile(fileName, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
   if(fileHandle != INVALID_HANDLE_VALUE) {
